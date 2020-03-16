@@ -1,0 +1,12 @@
+ARG GOLANG_VERSION
+
+FROM golang:$GOLANG_VERSION-alpine
+
+RUN echo $GOLANG_VERSION
+RUN apk update && apk add --no-cache git bash make gcc libc-dev librdkafka-dev pkgconf openssh netcat-openbsd curl kafkacat
+RUN go get -u golang.org/x/lint/golint
+RUN mkdir -p /transformer/tests
+
+WORKDIR /transformer/tests
+
+COPY . .
