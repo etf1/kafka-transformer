@@ -8,16 +8,10 @@ import (
 
 	"github.com/etf1/kafka-transformer/pkg/kafka"
 	"github.com/sirupsen/logrus"
-	metrics "github.com/tevjef/go-runtime-metrics"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 func main() {
-
-	if err := metrics.RunCollector(metrics.DefaultConfig); err != nil {
-		log.Fatalf("run collector failed: %v", err)
-	}
-
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 

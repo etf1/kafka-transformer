@@ -8,7 +8,7 @@ import (
 
 type customTransformer struct{}
 
-func (ct customTransformer) Transform(src *kafka.Message) (*kafka.Message, error) {
+func (ct customTransformer) Transform(src *kafka.Message) *kafka.Message {
 	topic := "custom-transformer"
 	dst := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{
@@ -25,5 +25,5 @@ func (ct customTransformer) Transform(src *kafka.Message) (*kafka.Message, error
 		}),
 	}
 
-	return dst, nil
+	return dst
 }

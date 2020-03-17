@@ -47,11 +47,10 @@ func (t *Transformer) Run(wg *sync.WaitGroup, inChan chan *confluent.Message) ch
 					}
 				}()
 				t.log.Debugf("transformer: received message %v", m.Key)
-				res, err := t.transformer.Transform(m)
-				if err != nil {
-					t.log.Errorf("failed to transform message %v: %v", err, m.Key)
+				res := t.transformer.Transform(m)
+				if res != nil {
+					outChan <- res
 				}
-				outChan <- res
 			}()
 		}
 	}()

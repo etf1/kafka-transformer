@@ -9,7 +9,7 @@ The user of this library provides a transformation by providing an implementatio
 
 ```golang
 type Transformer interface {
-	Transform(src *kafka.Message) (*kafka.Message, error)
+	Transform(src *kafka.Message) *kafka.Message
 }
 ```
 
@@ -104,24 +104,24 @@ And an example of a dummy transformer implementation:
 ```golang
 type customTransformer struct{}
 
-func (ct customTransformer) Transform(src *kafka.Message) (*kafka.Message, error) {
-    topic := "custom-transformer"
+func (ct customTransformer) Transform(src *kafka.Message) *kafka.Message {
+	topic := "custom-transformer"
 	dst := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{
 			Topic:     &topic,
 			Partition: kafka.PartitionAny,
 		},
-		Value:         append([]byte("New value:"), src.Value...),
+		Value: append([]byte("New value:"), src.Value...),
 	}
 
-	return dst, nil
+	return dst
 }
 
 ```
 
 # Requirements
 
-* GO 1.13 (minimum)
+* Go 1.13 (minimum)
 * install [librdkafka](https://github.com/confluentinc/confluent-kafka-go#installing-librdkafka)
 
 for development:
