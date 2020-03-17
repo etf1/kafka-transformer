@@ -10,5 +10,3 @@ require (
 	github.com/tevjef/go-runtime-metrics v0.0.0-20170326170900-527a54029307
 	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.1.0
 )
-
-replace github.com/etf1/kafka-transformer => /Users/tf1/go/src/github.com/etf1/kafka-transformer
