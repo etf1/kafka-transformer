@@ -46,7 +46,7 @@ func (t *Transformer) Run(wg *sync.WaitGroup, inChan chan *confluent.Message) ch
 						t.log.Errorf("transformer recovered from panic: %v", err)
 					}
 				}()
-				t.log.Debugf("transformer: received message %v", m.Key)
+				t.log.Debugf("transformer: received message %v", string(m.Key))
 				res := t.transformer.Transform(m)
 				if res != nil {
 					outChan <- res
