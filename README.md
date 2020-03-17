@@ -1,5 +1,7 @@
 kafka-transformer is a library for simplyfing message transformation tasks when using kafka (written proudly in GO :) ).
 
+![Go](https://github.com/etf1/kafka-transformer/workflows/Go/badge.svg?branch=develop)
+
 # Overview
 
 The main goal of this project is to be able to consume messages from a topic, perform a customizable transformation and publish the result to another topic. 
