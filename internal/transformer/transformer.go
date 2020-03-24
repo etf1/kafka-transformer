@@ -31,28 +31,16 @@ func (t *Transformer) Run(wg *sync.WaitGroup, inChan chan *confluent.Message) ch
 
 	outChan := make(chan *confluent.Message, t.bufferSize)
 
+	workers := newWorkers(t.log, t.bufferSize, inChan, t.transformer)
+
 	go func() {
 		defer func() {
 			log.Println("stopping transformer")
 			close(outChan)
 			wg.Done()
 		}()
-		for m := range inChan {
-			// body of the loop is executed as a function (to allow recover from panic)
-			// because we don't control the code provided for the Transformer interface
-			func() {
-				defer func() {
-					if err := recover(); err != nil {
-						t.log.Errorf("transformer recovered from panic: %v", err)
-					}
-				}()
-				t.log.Debugf("transformer: received message %v", string(m.Key))
-				res := t.transformer.Transform(m)
-				if res != nil {
-					outChan <- res
-				}
-			}()
-		}
+
+		workers.Run(outChan)
 	}()
 
 	return outChan

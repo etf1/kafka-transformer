@@ -15,7 +15,7 @@ import (
 // Config is the configuration used by KafkaTransformer
 type Config struct {
 	SourceTopic    string
-	bufferSize     int
+	BufferSize     int
 	ConsumerConfig *confluent.ConfigMap
 	ProducerConfig *confluent.ConfigMap
 	Transformer    transformer.Transformer
@@ -45,8 +45,8 @@ func NewKafkaTransformer(config Config) (Transformer, error) {
 	}
 
 	bufferSize := 200
-	if config.bufferSize != 0 {
-		bufferSize = config.bufferSize
+	if config.BufferSize != 0 {
+		bufferSize = config.BufferSize
 	}
 
 	consumer, err := kafka.NewConsumer(l, config.SourceTopic, config.ConsumerConfig, bufferSize)
