@@ -19,8 +19,8 @@ type defaultLogger struct {
 // DefaultLogger is the default implementation of Log stdout/stderr
 func DefaultLogger() Log {
 	return defaultLogger{
-		out: log.New(os.Stdout, "", 0),
-		err: log.New(os.Stderr, "", 0),
+		out: log.New(os.Stdout, "", log.LstdFlags),
+		err: log.New(os.Stderr, "", log.LstdFlags),
 	}
 }
 

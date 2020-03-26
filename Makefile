@@ -16,6 +16,7 @@ build: verify
 verify:
 	bash ./scripts/check_gofmt.sh
 	bash ./scripts/check_golint.sh
+	bash ./scripts/check_govet.sh
 
 .PHONY: tests
 tests: verify

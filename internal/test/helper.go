@@ -157,6 +157,4 @@ func consumeMessages(t *testing.T, topic string) []*confluent.Message {
 			}
 		}
 	}
-
-	return result
 }

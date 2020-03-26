@@ -4,7 +4,8 @@ kafka-transformer is a library for simplyfing message transformation tasks when 
 
 # Overview
 
-The main goal of this project is to be able to consume messages from a topic, perform a customizable transformation and publish the result to another topic. 
+The main goal of this project is to be able to consume messages from a topic, perform a customizable transformation and project the result to another topic via a kafka producer or to an external system with a custom projector.
+
 The user of this library provides a transformation by providing an implementation of the interface `Transformer` as described below:
 
 ```golang
@@ -16,11 +17,11 @@ type Transformer interface {
 
 ```
                             +-------------------+
-+------------------+        |                   |         +------------------+
-|                  |        |                   |         |                  |
-|       topic      +------->+ kafka-transformer +-------->+     topic        |
-|                  |        |                   |         |                  |
-+------------------+        |                   |         +------------------+
++------------------+        |                   |         +------------------------------+
+|                  |        |                   |         |                              |
+|       topic      +------->+ kafka-transformer +-------->+     topic or external        |
+|                  |        |                   |         |                              |
++------------------+        |                   |         +------------------------------+
                             +-------------------+
 
 ```
@@ -34,8 +35,8 @@ Implementation details:
 - kafka-transformer is based confluent-kafka-go which is a wrapper around the C library librdkafka (for more [details](https://github.com/confluentinc/confluent-kafka-go)).
 - kafka-transformer is using a double buffering mechanism between the three main components: 
     * consumer
-    * transformer
-    * producer
+    * transformer with workers (pool of goroutines for parallel transformation)
+    * projector (kafka producer of custom projector)
 - Each of this components are communicated through channels. For more details check the source code.
 
 # Example
@@ -72,11 +73,12 @@ type Config struct {
 }
 ```
 
-- SourceTopic: is the source topic where the messages will be read from.
-- ConsumerConfig: is the configuration for the consumer (see [documentation](https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md))
-- ProducerConfig: is the configuration for the producer (see [documentation](https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md))
-- Transformer: is the implementation of the interface `Transformer`
-- Log: the implementation of the interface `Log`, if you want to use your own logger
+- SourceTopic: source topic where the messages will be read from.
+- ConsumerConfig: configuration for the consumer (see [documentation](https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md))
+- ProducerConfig: configuration for the kafka producer. (see [documentation](https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md)). If you want custom projection provide a Projector (see below). 
+- Transformer: implementation of the `Transformer` interface.
+- Log: the implementation of the `Log` interface, if you want to use your own logger.
+- Projector : implementation of the `Projector` interface for custom projection to an external system (eg redis). This option is incompatible with `ProducerConfig` (see [custom_projector](examples/custom_projector))
 
 Below an example of a configuration:
 

@@ -8,7 +8,7 @@ import (
 	internal "github.com/etf1/kafka-transformer/internal/transformer"
 	"github.com/etf1/kafka-transformer/internal/transformer/kafka"
 	"github.com/etf1/kafka-transformer/pkg/logger"
-	"github.com/etf1/kafka-transformer/pkg/transformer"
+	pkg "github.com/etf1/kafka-transformer/pkg/transformer"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
@@ -18,7 +18,8 @@ type Config struct {
 	BufferSize     int
 	ConsumerConfig *confluent.ConfigMap
 	ProducerConfig *confluent.ConfigMap
-	Transformer    transformer.Transformer
+	Transformer    pkg.Transformer
+	Projector      pkg.Projector
 	Log            logger.Log
 }
 
@@ -27,6 +28,7 @@ type Transformer struct {
 	consumer    *kafka.Consumer
 	producer    *kafka.Producer
 	transformer *internal.Transformer
+	projector   *internal.Projector
 	config      Config
 	wg          *sync.WaitGroup
 }
@@ -34,12 +36,20 @@ type Transformer struct {
 // NewKafkaTransformer constructor for Transformer
 func NewKafkaTransformer(config Config) (Transformer, error) {
 
+	if config.ProducerConfig == nil && config.Projector == nil {
+		return Transformer{}, fmt.Errorf("missing configuration: ProducerConfig or Projector")
+	}
+
+	if config.ProducerConfig != nil && config.Projector != nil {
+		return Transformer{}, fmt.Errorf("configuration must be set as either 'ProducerConfig' or 'Projector'")
+	}
+
 	l := logger.DefaultLogger()
 	if config.Log != nil {
 		l = config.Log
 	}
 
-	t := transformer.PassThrough()
+	t := pkg.PassThrough()
 	if config.Transformer != nil {
 		t = config.Transformer
 	}
@@ -56,17 +66,29 @@ func NewKafkaTransformer(config Config) (Transformer, error) {
 
 	transformer := internal.NewTransformer(l, t, bufferSize)
 
-	producer, err := kafka.NewProducer(l, config.ProducerConfig)
-	if err != nil {
-		return Transformer{}, fmt.Errorf("consumer creation failed: %w", err)
-	}
-
-	return Transformer{
+	kafkaTransformer := Transformer{
 		consumer:    &consumer,
-		producer:    &producer,
 		transformer: &transformer,
 		wg:          &sync.WaitGroup{},
-	}, nil
+	}
+
+	var projector pkg.Projector
+
+	if config.ProducerConfig != nil {
+		producer, err := kafka.NewProducer(l, config.ProducerConfig)
+		if err != nil {
+			return Transformer{}, fmt.Errorf("producer creation failed: %w", err)
+		}
+		kafkaTransformer.producer = &producer
+		projector = &producer
+	} else if config.Projector != nil {
+		projector = config.Projector
+	}
+
+	p := internal.NewProjector(l, projector)
+	kafkaTransformer.projector = &p
+
+	return kafkaTransformer, nil
 }
 
 // Stop will stop Transformer components (consumer, transformer, producer)
@@ -75,7 +97,10 @@ func (k Transformer) Stop() {
 	// stopping consumer will make other component stops
 	k.consumer.Stop()
 	k.wg.Wait()
-	log.Println("kafka transformer stoppped")
+	if k.producer != nil {
+		k.producer.Close()
+	}
+	log.Println("kafka transformer stopped")
 }
 
 // Run will start the Transformer with all the components (consumer, transformer, producer)
@@ -96,8 +121,8 @@ func (k Transformer) Run() error {
 	transformerChan := k.transformer.Run(k.wg, consumerChan)
 
 	// Finally, producer
-	log.Println("starting producer ...")
-	k.producer.Run(k.wg, transformerChan)
+	log.Println("starting projector ...")
+	k.projector.Run(k.wg, transformerChan)
 
 	k.wg.Wait()
 
