@@ -99,28 +99,22 @@ func produceMessages(t *testing.T, messages []*confluent.Message) {
 	p.Flush(10000)
 }
 
-func assertEquals(t *testing.T, a, b []*confluent.Message) bool {
+func assertEquals(t *testing.T, a, b []*confluent.Message) {
 	if len(a) != len(b) {
-		t.Logf("messages length not equals, %v != %v", len(a), len(b))
-		return false
+		t.Fatalf("messages length not equals, %v != %v", len(a), len(b))
 	}
 
 	for i, msg := range a {
 		if !reflect.DeepEqual(msg.Headers, b[i].Headers) {
-			t.Logf("headers not equals, %v != %v", msg.Headers, b[i].Headers)
-			return false
+			t.Fatalf("headers not equals, %v != %v", msg.Headers, b[i].Headers)
 		}
 		if !bytes.Equal(msg.Key, b[i].Key) {
-			t.Logf("keys not equals, %v != %v", msg.Key, b[i].Key)
-			return false
+			t.Fatalf("keys not equals, %v != %v", msg.Key, b[i].Key)
 		}
 		if !bytes.Equal(msg.Value, b[i].Value) {
-			t.Logf("values not equals, %v != %v", msg.Value, b[i].Value)
-			return false
+			t.Fatalf("values not equals, %v != %v", msg.Value, b[i].Value)
 		}
 	}
-
-	return true
 }
 
 func consumeMessages(t *testing.T, topic string) []*confluent.Message {

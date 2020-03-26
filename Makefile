@@ -9,7 +9,8 @@ dev.down:
 	docker-compose -p dev down -v
 
 .PHONY: build
-build: tests.docker
+build: verify
+	go build -v ./...
 
 .PHONY: verify
 verify:
