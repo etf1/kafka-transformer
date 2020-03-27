@@ -6,13 +6,12 @@ import (
 
 	"github.com/etf1/kafka-transformer/pkg/logger"
 	"github.com/etf1/kafka-transformer/pkg/transformer"
-	pkg "github.com/etf1/kafka-transformer/pkg/transformer"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 // Transformer represents the transformer which will perform the custom transformation
 type Transformer struct {
-	transformer pkg.Transformer
+	transformer transformer.Transformer
 	bufferSize  int
 	log         logger.Log
 }
@@ -28,17 +27,13 @@ func NewTransformer(log logger.Log, transformer transformer.Transformer, bufferS
 
 // Run will start the transformer process
 func (t *Transformer) Run(wg *sync.WaitGroup, inChan chan *confluent.Message) chan *confluent.Message {
-
 	outChan := make(chan *confluent.Message, t.bufferSize)
-
 	workers := newWorkers(t.log, t.bufferSize, inChan, t.transformer)
 
 	go func() {
-		defer func() {
-			log.Println("stopping transformer")
-			close(outChan)
-			wg.Done()
-		}()
+		defer wg.Done()
+		defer close(outChan)
+		defer log.Println("stopping transformer")
 
 		workers.Run(outChan)
 	}()

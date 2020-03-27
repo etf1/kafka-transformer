@@ -32,7 +32,9 @@ func newWorkers(log logger.Log, maxWorker int, workChan chan *confluent.Message,
 
 func flushChunk(resultChan chan *confluent.Message, chunk []*confluent.Message, size int) {
 	for i := 0; i < size; i++ {
-		resultChan <- chunk[i]
+		if chunk[i] != nil {
+			resultChan <- chunk[i]
+		}
 	}
 
 	for i := 0; i < len(chunk); i++ {
@@ -79,20 +81,19 @@ loop:
 				counter = 0
 			}
 		case <-time.After(2 * time.Second):
-			w.log.Debugf("worker: nothing to do...")
+			w.log.Debugf("worker: timed out...")
 			if counter > 0 {
-				w.log.Debugf("worker: flushing remaining messages (length:%v)...", counter)
+				w.log.Debugf("worker: waiting for %v goroutines to complete...", counter)
+				wg.Wait()
 				flushChunk(resultChan, chunk, counter)
 				counter = 0
 			}
 		}
 	}
 
-	w.log.Debugf("worker: waiting for last %v goroutines to complete...", counter)
-	wg.Wait()
-
 	if counter > 0 {
-		w.log.Debugf("worker: flushing last messages (length:%v)...", counter)
+		w.log.Debugf("worker: waiting for %v goroutines to complete...", counter)
+		wg.Wait()
 		flushChunk(resultChan, chunk, counter)
 		counter = 0
 	}

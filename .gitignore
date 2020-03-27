@@ -1,2 +1,3 @@
 tests.result
-custom_transformer
+examples/custom_projector/custom_projector
+examples/custom_transformer/custom_transformer
