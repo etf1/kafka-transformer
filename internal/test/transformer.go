@@ -9,17 +9,34 @@ type unstableTransformer struct {
 	passthrough transformer.Transformer
 }
 
-// NewUnstableTransformer will return a transformer panicking every modulo sequence
+// NewUnstableTransformer creates a transformer which will panic when a message is equal to "panic"
 func NewUnstableTransformer() transformer.Transformer {
 	return unstableTransformer{
 		passthrough: transformer.PassThrough(),
 	}
 }
 
-func (ut unstableTransformer) Transform(msg *kafka.Message) *kafka.Message {
+func (ut unstableTransformer) Transform(msg *kafka.Message) []*kafka.Message {
 	if string(msg.Value) == "panic" {
 		panic("dummy panic from unstable transformer")
 	}
 
 	return ut.passthrough.Transform(msg)
+}
+
+type duplicatorTransformer struct {
+	passthrough transformer.Transformer
+}
+
+// NewDuplicatorTransformer creates a transformer which will duplicate each message 1->2
+func NewDuplicatorTransformer() transformer.Transformer {
+	return duplicatorTransformer{
+		passthrough: transformer.PassThrough(),
+	}
+}
+
+func (dt duplicatorTransformer) Transform(msg *kafka.Message) []*kafka.Message {
+	result := dt.passthrough.Transform(msg)
+	// return 2 times the same message, for testing duplication
+	return append(result, result[0])
 }

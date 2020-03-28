@@ -112,7 +112,17 @@ func assertEquals(t *testing.T, a, b []*confluent.Message) {
 			t.Fatalf("keys not equals, %v != %v", msg.Key, b[i].Key)
 		}
 		if !bytes.Equal(msg.Value, b[i].Value) {
-			t.Fatalf("values not equals, %v != %v", msg.Value, b[i].Value)
+			t.Fatalf("values not equals, %v != %v", string(msg.Value), string(b[i].Value))
+		}
+	}
+}
+
+func printMessages(t *testing.T, prefix string, msgs []*confluent.Message) {
+	for i, msg := range msgs {
+		if msg == nil {
+			t.Logf("%v: %v: message is nil\n", prefix, i)
+		} else {
+			t.Logf("%v: %v: value:%v\n", prefix, i, string(msg.Value))
 		}
 	}
 }
@@ -131,7 +141,7 @@ func consumeMessages(t *testing.T, topic string) []*confluent.Message {
 
 	stopChan := make(chan bool)
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(15 * time.Second)
 		stopChan <- true
 	}()
 

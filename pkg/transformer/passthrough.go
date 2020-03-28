@@ -7,7 +7,7 @@ import (
 type passThrough struct{}
 
 // Transform a kafka Message
-func (p passThrough) Transform(src *kafka.Message) *kafka.Message {
+func (p passThrough) Transform(src *kafka.Message) []*kafka.Message {
 	topic := *src.TopicPartition.Topic + "-passthrough"
 
 	msg := &kafka.Message{
@@ -20,7 +20,7 @@ func (p passThrough) Transform(src *kafka.Message) *kafka.Message {
 		Headers: src.Headers,
 	}
 
-	return msg
+	return []*kafka.Message{msg}
 }
 
 // PassThrough returns a transformer which does nothing,

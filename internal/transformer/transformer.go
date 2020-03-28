@@ -31,6 +31,7 @@ func (t *Transformer) Run(wg *sync.WaitGroup, inChan chan *confluent.Message) ch
 	workers := newWorkers(t.log, t.bufferSize, inChan, t.transformer)
 
 	go func() {
+		defer log.Println("transformer stopped")
 		defer wg.Done()
 		defer close(outChan)
 		defer log.Println("stopping transformer")
