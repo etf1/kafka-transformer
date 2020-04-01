@@ -1,6 +1,7 @@
 package test
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -43,6 +44,49 @@ func TestTransformer_default(t *testing.T) {
 	finalMessages := consumeMessages(t, dstTopic)
 
 	assertEquals(t, messages, finalMessages)
+}
+
+// Default case with a simple transformer
+func TestTransformer_duplicator(t *testing.T) {
+	srcTopic := getTopic(t, "source-topic")
+	dstTopic := srcTopic + "-passthrough"
+
+	config := kafka.Config{
+		SourceTopic:    srcTopic,
+		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
+		ProducerConfig: getProducerConfig(),
+		Transformer:    NewDuplicatorTransformer(),
+	}
+
+	transformer, err := kafka.NewKafkaTransformer(config)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer transformer.Stop()
+
+	go func() {
+		err = transformer.Run()
+	}()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// 10 because each messages are duplicated
+	expectedMessages := make([]*confluent.Message, 10)
+	messages := make([]*confluent.Message, 5)
+
+	for i := range messages {
+		msg := message(srcTopic, "message"+strconv.Itoa(i))
+		messages[i] = msg
+		expectedMessages[2*i] = msg
+		expectedMessages[2*i+1] = msg
+	}
+
+	produceMessages(t, messages)
+
+	finalMessages := consumeMessages(t, dstTopic)
+
+	assertEquals(t, expectedMessages, finalMessages)
 }
 
 // Transformer should recover from a panic
@@ -197,7 +241,7 @@ func TestProjector_recover_panic(t *testing.T) {
 
 	produceMessages(t, messages)
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(15 * time.Second)
 
 	transformer.Stop()
 

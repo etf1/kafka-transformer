@@ -21,6 +21,18 @@ type Workers struct {
 	transformer pkg.Transformer
 }
 
+type chunk [][]*confluent.Message
+
+func newChunk(size int) chunk {
+	return make([][]*confluent.Message, size)
+}
+
+func (c chunk) reset() {
+	for i := 0; i < len(c); i++ {
+		c[i] = nil
+	}
+}
+
 func newWorkers(log logger.Log, maxWorker int, workChan chan *confluent.Message, transformer pkg.Transformer) Workers {
 	return Workers{
 		log:         log,
@@ -30,16 +42,15 @@ func newWorkers(log logger.Log, maxWorker int, workChan chan *confluent.Message,
 	}
 }
 
-func flushChunk(resultChan chan *confluent.Message, chunk []*confluent.Message, size int) {
+func flushChunk(resultChan chan *confluent.Message, c chunk, size int) {
 	for i := 0; i < size; i++ {
-		if chunk[i] != nil {
-			resultChan <- chunk[i]
+		if c[i] != nil {
+			for _, msg := range c[i] {
+				resultChan <- msg
+			}
 		}
 	}
-
-	for i := 0; i < len(chunk); i++ {
-		chunk[i] = nil
-	}
+	c.reset()
 }
 
 // Run starts parallel processing of messages
@@ -47,7 +58,7 @@ func (w Workers) Run(resultChan chan *confluent.Message) {
 	log.Println("starting transformer workers")
 
 	wg := sync.WaitGroup{}
-	chunk := make([]*confluent.Message, w.maxWorker)
+	chunk := newChunk(w.maxWorker)
 	counter := 0
 
 loop:
@@ -81,7 +92,7 @@ loop:
 				counter = 0
 			}
 		case <-time.After(2 * time.Second):
-			w.log.Debugf("worker: timed out...")
+			//w.log.Debugf("worker: timed out...")
 			if counter > 0 {
 				w.log.Debugf("worker: waiting for %v goroutines to complete...", counter)
 				wg.Wait()
@@ -97,5 +108,5 @@ loop:
 		flushChunk(resultChan, chunk, counter)
 		counter = 0
 	}
-	log.Println("stopping transformer workers")
+	log.Println("transformer workers stopped")
 }

@@ -8,5 +8,5 @@ import (
 // in order to transform a kafka Message.
 // If nil is returned the message will be ignored
 type Transformer interface {
-	Transform(src *kafka.Message) *kafka.Message
+	Transform(src *kafka.Message) []*kafka.Message
 }
