@@ -1,18 +1,41 @@
 package test
 
 import (
+	"testing"
+	"time"
+
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
-// sliceProjector will simply write the message in a slice
-type sliceProjector struct {
-	list []*kafka.Message
+// SliceProjector will simply write the message in a slice
+type SliceProjector struct {
+	msgs     []*kafka.Message
+	readChan chan *kafka.Message
+}
+
+// NewSliceProjector will create a simple projector which stores messages in memory in a slice
+func NewSliceProjector() *SliceProjector {
+	return &SliceProjector{
+		readChan: make(chan *kafka.Message, 100),
+	}
 }
 
 // Project implements Projector interface
-func (cp *sliceProjector) Project(msg *kafka.Message) {
+func (sp *SliceProjector) Project(msg *kafka.Message) {
 	if string(msg.Value) == "panic" {
-		panic("panic !!!")
+		panic("panic from projector")
 	}
-	cp.list = append(cp.list, msg)
+	sp.msgs = append(sp.msgs, msg)
+	sp.readChan <- msg
+}
+
+func (sp *SliceProjector) assertEquals(t *testing.T, msgs []*kafka.Message) {
+	for _, m := range msgs {
+		select {
+		case msg := <-sp.readChan:
+			assertMessageEquals(t, m, msg)
+		case <-time.After(20 * time.Second):
+			t.Fatalf("unexpected timeout when reading message: %v", m)
+		}
+	}
 }

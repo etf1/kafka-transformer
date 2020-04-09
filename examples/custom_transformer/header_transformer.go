@@ -12,9 +12,9 @@ type headerTransformer struct {
 }
 
 // Add a custom header x-app-id to the message
-func (ht headerTransformer) Transform(src *kafka.Message) *kafka.Message {
+func (ht headerTransformer) Transform(src *kafka.Message) []*kafka.Message {
 	topic := "custom-transformer"
-	dst := &kafka.Message{
+	msg := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{
 			Topic:     &topic,
 			Partition: kafka.PartitionAny,
@@ -29,5 +29,5 @@ func (ht headerTransformer) Transform(src *kafka.Message) *kafka.Message {
 		}),
 	}
 	ht.log.Debugf("header-transformer: transforming message: %v")
-	return dst
+	return []*kafka.Message{msg}
 }

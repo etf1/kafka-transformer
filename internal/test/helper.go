@@ -8,7 +8,9 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -65,11 +67,24 @@ func getProducerConfig() *confluent.ConfigMap {
 	}
 }
 
+var msgID int64
+
 func message(topic string, value string) *confluent.Message {
 	return &confluent.Message{
 		TopicPartition: confluent.TopicPartition{Topic: &topic, Partition: confluent.PartitionAny},
 		Value:          []byte(value),
+		Key:            []byte(strconv.FormatInt(atomic.AddInt64(&msgID, 1), 10)),
 	}
+}
+
+func messages(topic string, count int) []*confluent.Message {
+	messages := make([]*confluent.Message, 0)
+
+	for i := 1; i <= count; i++ {
+		messages = append(messages, message(topic, "message"+string(i)))
+	}
+
+	return messages
 }
 
 func produceMessages(t *testing.T, messages []*confluent.Message) {
@@ -114,6 +129,42 @@ func assertEquals(t *testing.T, a, b []*confluent.Message) {
 		if !bytes.Equal(msg.Value, b[i].Value) {
 			t.Fatalf("values not equals, %v != %v", string(msg.Value), string(b[i].Value))
 		}
+	}
+}
+
+func assertMessageEquals(t *testing.T, m1, m2 *confluent.Message) {
+	if !reflect.DeepEqual(m1.Headers, m2.Headers) {
+		t.Fatalf("headers not equals, %v != %v", m1.Headers, m2.Headers)
+	}
+	if !bytes.Equal(m1.Key, m2.Key) {
+		t.Fatalf("keys not equals, %v != %v", m1.Key, m2.Key)
+	}
+	if !bytes.Equal(m1.Value, m2.Value) {
+		t.Fatalf("values not equals, %v != %v", string(m1.Value), string(m2.Value))
+	}
+}
+
+func assertMessagesinTopic(t *testing.T, topic string, msgs []*confluent.Message) {
+	c, err := confluent.NewConsumer(getConsumerConfig(t, "group"))
+	if err != nil {
+		t.Fatalf("Failed to create consumer: %v", err)
+	}
+	defer c.Close()
+
+	t.Logf("consumer config: %v", getConsumerConfig(t, "group"))
+
+	err = c.SubscribeTopics([]string{topic}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, m := range msgs {
+		msg, err := c.ReadMessage(20 * time.Second)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		assertMessageEquals(t, m, msg)
 	}
 }
 

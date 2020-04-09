@@ -2,8 +2,12 @@ package transformer
 
 import (
 	"log"
+	"runtime/debug"
 	"sync"
+	"time"
 
+	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
+	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/logger"
 	pkg "github.com/etf1/kafka-transformer/pkg/transformer"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
@@ -13,13 +17,17 @@ import (
 type Projector struct {
 	projector pkg.Projector
 	log       logger.Log
+	collector instrument.Collector
+	collect   bool
 }
 
 // NewProjector is the constructor for a Projector
-func NewProjector(log logger.Log, projector pkg.Projector) Projector {
+func NewProjector(log logger.Log, projector pkg.Projector, collector instrument.Collector, collect bool) Projector {
 	return Projector{
 		projector: projector,
 		log:       log,
+		collector: collector,
+		collect:   collect,
 	}
 }
 
@@ -29,20 +37,47 @@ func (p *Projector) Run(wg *sync.WaitGroup, inChan chan *confluent.Message) {
 		defer log.Println("projector stopped")
 		defer wg.Done()
 
-		for m := range inChan {
+		for msg := range inChan {
+			var start time.Time
+			var th _instrument.TimeHolder
+
 			// body of the loop is executed as a function (to allow recover from panic)
 			// because we don't control the implementation provided for the interface
 			func() {
 				defer func() {
-					if err := recover(); err != nil {
-						p.log.Errorf("projector: recovered from panic: %v", err)
+					if r := recover(); r != nil {
+						p.collectAfter(msg, toErr(r), start, th)
+						p.log.Errorf("projector: recovered from panic: %v", string(debug.Stack()))
 					}
 				}()
-				p.log.Debugf("projector: received message %v", m)
-				p.projector.Project(m)
+				p.log.Debugf("projector: received message %v", msg)
+
+				start = time.Now()
+				th = p.collectBefore(msg, start)
+
+				p.projector.Project(msg)
+
+				p.collectAfter(msg, nil, start, th)
+
 			}()
 		}
 
 		log.Println("stopping projector")
 	}()
+}
+
+func (p Projector) collectBefore(msg *confluent.Message, start time.Time) (th _instrument.TimeHolder) {
+	if p.collect {
+		th = msg.Opaque.(_instrument.TimeHolder)
+		msg.Opaque = th.Opaque
+		p.collector.Before(msg, instrument.ProjectorProject, start)
+	}
+	return
+}
+
+func (p Projector) collectAfter(msg *confluent.Message, err error, start time.Time, th _instrument.TimeHolder) {
+	if p.collect {
+		p.collector.After(msg, instrument.ProjectorProject, err, start)
+		p.collector.After(msg, instrument.OverallTime, err, th.ConsumeStart)
+	}
 }

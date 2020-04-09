@@ -10,7 +10,7 @@ The user of this library provides a transformation by providing an implementatio
 
 ```golang
 type Transformer interface {
-	Transform(src *kafka.Message) *kafka.Message
+	Transform(src *kafka.Message) []*kafka.Message
 }
 ```
 
@@ -25,6 +25,12 @@ type Transformer interface {
                             +-------------------+
 
 ```
+
+# Design pattern
+
+- Passthrough : 1 topic -> 1 topic
+- Splitter    : 1 topic -> n topics (transformer returns n messages with different topics)
+- Projector   : 1 topic -> n external systems
 
 # Architecture
 
@@ -101,12 +107,22 @@ config := kafka.Config{
 
 ```
 
-And an example of a dummy transformer implementation:
+# Custom transformer
+
+You can provide your own transformation by providing an implementation of the Transformer interface : 
+
+```golang
+type Transformer interface {
+	Transform(src *kafka.Message) []*kafka.Message
+}
+```
+
+Here is an example :
 
 ```golang
 type customTransformer struct{}
 
-func (ct customTransformer) Transform(src *kafka.Message) *kafka.Message {
+func (ct customTransformer) Transform(src *kafka.Message) []*kafka.Message {
 	topic := "custom-transformer"
 	dst := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{
@@ -116,10 +132,54 @@ func (ct customTransformer) Transform(src *kafka.Message) *kafka.Message {
 		Value: append([]byte("New value:"), src.Value...),
 	}
 
-	return dst
+	return []*kafka.Message{dst}
 }
 
 ```
+
+If you want to create multiple messages from one source message, you can achieve it in the transform function. If the messages has different topic, each message will be publish to the specified topic
+
+
+# Custom projector
+
+You can provide your own projection, if you don't want to project your message to kafka but to an external system like a database or a cache (redis). You need to implement the Projector interface. 
+
+```golang
+type Projector interface {
+	Project(message *kafka.Message)
+}
+```
+Here is an example which stores the messages in memory in a slice :
+
+```golang
+type sliceProjector struct {
+    msgs     []*kafka.Message
+}
+
+func (sp *sliceProjector) Project(msg *kafka.Message) {
+	sp.msgs = append(sp.msgs, msg)
+}
+
+```
+
+# Instrumentation
+
+If you need to instrument each main actions of the kafka transformer, you can provide an implementation of the Collector interface :
+
+```golang
+type Collector interface {
+	Before(message *confluent.Message, action Action, start time.Time)
+	After(message *confluent.Message, action Action, err error, start time.Time)
+}
+```
+
+Actions are :
+	- KafkaConsumerConsume: when a message is consumed
+	- KafkaProducerProduce: when a message is produced
+	- TransformerTransform: when a message is transformed
+	- ProjectorProject: when a message is projected (and not produced to kafka)
+
+You can find examples in [examples](examples/).
 
 # Requirements
 
@@ -133,8 +193,8 @@ for development:
 
 # Local development
 
-* git clone ...
-* to start local development environement (mainly kafka), run `make dev.up`, your kafka broker will be available at `localhost:9092`
+* git clone
+* to start local development environment (mainly kafka), run `make dev.up`, your kafka broker will be available at `localhost:9092`
 * to run tests `make tests`
 * to stop local environment, run `make dev.down`
 
