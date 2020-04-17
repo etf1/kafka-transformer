@@ -28,9 +28,9 @@ type Transformer interface {
 
 # Design pattern
 
-- Passthrough : 1 topic -> 1 topic
-- Splitter    : 1 topic -> n topics (transformer returns n messages with different topics)
-- Projector   : 1 topic -> n external systems
+- Passthrough: 1 topic -> 1 topic
+- Splitter:    1 topic -> n topics (transformer returns n messages with different topics)
+- Projector:   1 topic -> n external systems
 
 # Architecture
 
@@ -109,7 +109,7 @@ config := kafka.Config{
 
 # Custom transformer
 
-You can provide your own transformation by providing an implementation of the Transformer interface : 
+You can provide your own transformation by providing an implementation of the Transformer interface:
 
 ```golang
 type Transformer interface {
@@ -117,7 +117,7 @@ type Transformer interface {
 }
 ```
 
-Here is an example :
+Here is a usage example:
 
 ```golang
 type customTransformer struct{}
@@ -137,7 +137,7 @@ func (ct customTransformer) Transform(src *kafka.Message) []*kafka.Message {
 
 ```
 
-If you want to create multiple messages from one source message, you can achieve it in the transform function. If the messages has different topic, each message will be publish to the specified topic
+If you want to create multiple messages from one source message, you can achieve it in the transform function. If the messages has different topics, each message will be publish to its specified topic
 
 
 # Custom projector
@@ -149,7 +149,7 @@ type Projector interface {
 	Project(message *kafka.Message)
 }
 ```
-Here is an example which stores the messages in memory in a slice :
+Here is an example which stores the messages in a slice (in memory):
 
 ```golang
 type sliceProjector struct {
@@ -164,7 +164,7 @@ func (sp *sliceProjector) Project(msg *kafka.Message) {
 
 # Instrumentation
 
-If you need to instrument each main actions of the kafka transformer, you can provide an implementation of the Collector interface :
+If you need to instrument each main actions of the kafka transformer, you can provide an implementation of the Collector interface:
 
 ```golang
 type Collector interface {
@@ -173,7 +173,7 @@ type Collector interface {
 }
 ```
 
-Actions are :
+Available actions for a Collector are:
 	- KafkaConsumerConsume: when a message is consumed
 	- KafkaProducerProduce: when a message is produced
 	- TransformerTransform: when a message is transformed
@@ -197,5 +197,4 @@ for development:
 * to start local development environment (mainly kafka), run `make dev.up`, your kafka broker will be available at `localhost:9092`
 * to run tests `make tests`
 * to stop local environment, run `make dev.down`
-
 
