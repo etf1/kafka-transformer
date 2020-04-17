@@ -193,10 +193,9 @@ for development:
 
 # Local development
 
-* git clone
+* git clone git@github.com:etf1/kafka-transformer.git
 * to start local development environment (mainly kafka), run `make dev.up`, your kafka broker will be available at `localhost:9092`
 * to run tests `make tests`
 * to stop local environment, run `make dev.down`
-
 
 
