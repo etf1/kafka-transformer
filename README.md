@@ -153,7 +153,7 @@ Here is an example which stores the messages in a slice (in memory):
 
 ```golang
 type sliceProjector struct {
-    msgs     []*kafka.Message
+	msgs	[]*kafka.Message
 }
 
 func (sp *sliceProjector) Project(msg *kafka.Message) {

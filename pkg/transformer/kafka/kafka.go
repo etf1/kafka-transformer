@@ -82,7 +82,6 @@ func NewKafkaTransformer(config Config) (Transformer, error) {
 	}
 
 	var projector pkg.Projector
-	collect := true
 
 	if config.ProducerConfig != nil {
 		producer, err := kafka.NewProducer(l, config.ProducerConfig, collector)
@@ -91,12 +90,15 @@ func NewKafkaTransformer(config Config) (Transformer, error) {
 		}
 		kafkaTransformer.producer = &producer
 		projector = &producer
-		collect = false
+		// no collector when kafka producer, the collect action will be made in the kafka producer
+		// To avoid double collection, the collector is disabled in the projector (which is running the Projector.Project(msg) )
+		collector = nil
 	} else if config.Projector != nil {
+		// otherwise the collector is set when using the provided custom projector
 		projector = config.Projector
 	}
 
-	p := internal.NewProjector(l, projector, collector, collect)
+	p := internal.NewProjector(l, projector, collector)
 	kafkaTransformer.projector = &p
 
 	return kafkaTransformer, nil

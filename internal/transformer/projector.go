@@ -18,16 +18,14 @@ type Projector struct {
 	projector pkg.Projector
 	log       logger.Log
 	collector instrument.Collector
-	collect   bool
 }
 
 // NewProjector is the constructor for a Projector
-func NewProjector(log logger.Log, projector pkg.Projector, collector instrument.Collector, collect bool) Projector {
+func NewProjector(log logger.Log, projector pkg.Projector, collector instrument.Collector) Projector {
 	return Projector{
 		projector: projector,
 		log:       log,
 		collector: collector,
-		collect:   collect,
 	}
 }
 
@@ -67,7 +65,7 @@ func (p *Projector) Run(wg *sync.WaitGroup, inChan chan *confluent.Message) {
 }
 
 func (p Projector) collectBefore(msg *confluent.Message, start time.Time) (th _instrument.TimeHolder) {
-	if p.collect {
+	if p.collector != nil {
 		th = msg.Opaque.(_instrument.TimeHolder)
 		msg.Opaque = th.Opaque
 		p.collector.Before(msg, instrument.ProjectorProject, start)
@@ -76,7 +74,7 @@ func (p Projector) collectBefore(msg *confluent.Message, start time.Time) (th _i
 }
 
 func (p Projector) collectAfter(msg *confluent.Message, err error, start time.Time, th _instrument.TimeHolder) {
-	if p.collect {
+	if p.collector != nil {
 		p.collector.After(msg, instrument.ProjectorProject, err, start)
 		p.collector.After(msg, instrument.OverallTime, err, th.ConsumeStart)
 	}
