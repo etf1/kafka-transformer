@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
 	_logger "github.com/etf1/kafka-transformer/internal/logger"
@@ -24,6 +25,7 @@ type Config struct {
 	Transformer    pkg.Transformer
 	Projector      pkg.Projector
 	Log            logger.Log
+	WorkerTimeout  time.Duration
 	Collector      instrument.Collector
 }
 
@@ -68,12 +70,17 @@ func NewKafkaTransformer(config Config) (Transformer, error) {
 		bufferSize = config.BufferSize
 	}
 
+	workerTimeout := 100 * time.Millisecond
+	if config.WorkerTimeout != 0 {
+		workerTimeout = config.WorkerTimeout
+	}
+
 	consumer, err := kafka.NewConsumer(l, config.SourceTopic, config.ConsumerConfig, collector, bufferSize)
 	if err != nil {
 		return Transformer{}, fmt.Errorf("consumer creation failed: %w", err)
 	}
 
-	transformer := internal.NewTransformer(l, t, bufferSize, collector)
+	transformer := internal.NewTransformer(l, t, bufferSize, workerTimeout, collector)
 
 	kafkaTransformer := Transformer{
 		consumer:    &consumer,

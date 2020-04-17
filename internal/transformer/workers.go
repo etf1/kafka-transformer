@@ -23,6 +23,9 @@ type Workers struct {
 	// transformer function to perform by a worker
 	transformer pkg.Transformer
 	collector   instrument.Collector
+	// worker pool timeout, when the pool is not full, not reached the maxWorker size
+	// we will wait this timeout and flush the current messages
+	workerTimeout time.Duration
 }
 
 type chunk [][]*confluent.Message
@@ -37,13 +40,14 @@ func (c chunk) reset() {
 	}
 }
 
-func newWorkers(log logger.Log, maxWorker int, workChan chan *confluent.Message, transformer pkg.Transformer, collector instrument.Collector) Workers {
+func newWorkers(log logger.Log, maxWorker int, workChan chan *confluent.Message, transformer pkg.Transformer, workerTimeout time.Duration, collector instrument.Collector) Workers {
 	return Workers{
-		log:         log,
-		workChan:    workChan,
-		maxWorker:   maxWorker,
-		transformer: transformer,
-		collector:   collector,
+		log:           log,
+		workChan:      workChan,
+		maxWorker:     maxWorker,
+		transformer:   transformer,
+		collector:     collector,
+		workerTimeout: workerTimeout,
 	}
 }
 
@@ -107,7 +111,7 @@ loop:
 				flushChunk(resultChan, chunk, counter)
 				counter = 0
 			}
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(w.workerTimeout):
 			//w.log.Debugf("worker: timed out...")
 			if counter > 0 {
 				w.log.Debugf("worker: waiting for %v goroutines to complete...", counter)
