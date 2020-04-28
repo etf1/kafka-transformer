@@ -6,7 +6,6 @@ import (
 	"time"
 
 	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
-	"github.com/etf1/kafka-transformer/internal/timeout"
 	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/logger"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
@@ -57,15 +56,14 @@ func (c *Consumer) Run(wg *sync.WaitGroup) (chan *confluent.Message, error) {
 
 	go func() {
 		defer wg.Done()
-		defer timeout.WithTimeout(20*time.Second, func() interface{} {
+		defer func() {
 			log.Println("stopping consumer")
 			close(outChan)
 			err := c.consumer.Close()
 			if err != nil {
 				c.log.Errorf("error when closing consumer: %v", err)
 			}
-			return nil
-		})
+		}()
 
 		for {
 			select {

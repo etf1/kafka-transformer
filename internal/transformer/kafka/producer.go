@@ -75,6 +75,9 @@ func (p *Producer) Close() {
 }
 
 func (p Producer) collectBefore(msg *confluent.Message) {
+	if msg == nil {
+		return
+	}
 	start := time.Now()
 	th := msg.Opaque.(_instrument.TimeHolder)
 	th.ProjectStart = start
@@ -83,6 +86,9 @@ func (p Producer) collectBefore(msg *confluent.Message) {
 }
 
 func (p Producer) collectAfter(msg *confluent.Message, err error) {
+	if msg == nil {
+		return
+	}
 	th := msg.Opaque.(_instrument.TimeHolder)
 	p.collector.After(msg, instrument.KafkaProducerProduce, err, th.ProjectStart)
 	p.collector.After(msg, instrument.OverallTime, err, th.ConsumeStart)
