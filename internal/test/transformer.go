@@ -18,7 +18,7 @@ func NewUnstableTransformer() transformer.Transformer {
 
 func (ut unstableTransformer) Transform(msg *kafka.Message) []*kafka.Message {
 	if string(msg.Value) == "panic" {
-		panic("dummy panic from unstable transformer")
+		panic("panic from transformer")
 	}
 
 	return ut.passthrough.Transform(msg)
@@ -38,5 +38,22 @@ func NewDuplicatorTransformer() transformer.Transformer {
 func (dt duplicatorTransformer) Transform(msg *kafka.Message) []*kafka.Message {
 	result := dt.passthrough.Transform(msg)
 	// return 2 times the same message, for testing duplication
+	return append(result, result[0])
+}
+
+type opaqueTransformer struct {
+	passthrough transformer.Transformer
+}
+
+// NewOpaqueTransformer creates a transformer which will set a value for the opaque field of a kafka message.
+func NewOpaqueTransformer() transformer.Transformer {
+	return opaqueTransformer{
+		passthrough: transformer.PassThrough(),
+	}
+}
+
+func (ot opaqueTransformer) Transform(msg *kafka.Message) []*kafka.Message {
+	result := ot.passthrough.Transform(msg)
+	result[0].Opaque = "opaque"
 	return append(result, result[0])
 }

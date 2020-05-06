@@ -4,9 +4,13 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
+	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
+	_logger "github.com/etf1/kafka-transformer/internal/logger"
 	internal "github.com/etf1/kafka-transformer/internal/transformer"
 	"github.com/etf1/kafka-transformer/internal/transformer/kafka"
+	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/logger"
 	pkg "github.com/etf1/kafka-transformer/pkg/transformer"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
@@ -21,6 +25,8 @@ type Config struct {
 	Transformer    pkg.Transformer
 	Projector      pkg.Projector
 	Log            logger.Log
+	WorkerTimeout  time.Duration
+	Collector      instrument.Collector
 }
 
 // Transformer is the orchestrator ot the tree main components: consumer, transformer, producer
@@ -44,7 +50,7 @@ func NewKafkaTransformer(config Config) (Transformer, error) {
 		return Transformer{}, fmt.Errorf("configuration must be set as either 'ProducerConfig' or 'Projector'")
 	}
 
-	l := logger.DefaultLogger()
+	l := _logger.StdoutLogger()
 	if config.Log != nil {
 		l = config.Log
 	}
@@ -54,17 +60,27 @@ func NewKafkaTransformer(config Config) (Transformer, error) {
 		t = config.Transformer
 	}
 
+	collector := _instrument.NoopCollector(false)
+	if config.Collector != nil {
+		collector = config.Collector
+	}
+
 	bufferSize := 200
 	if config.BufferSize != 0 {
 		bufferSize = config.BufferSize
 	}
 
-	consumer, err := kafka.NewConsumer(l, config.SourceTopic, config.ConsumerConfig, bufferSize)
+	workerTimeout := 100 * time.Millisecond
+	if config.WorkerTimeout != 0 {
+		workerTimeout = config.WorkerTimeout
+	}
+
+	consumer, err := kafka.NewConsumer(l, config.SourceTopic, config.ConsumerConfig, collector, bufferSize)
 	if err != nil {
 		return Transformer{}, fmt.Errorf("consumer creation failed: %w", err)
 	}
 
-	transformer := internal.NewTransformer(l, t, bufferSize)
+	transformer := internal.NewTransformer(l, t, bufferSize, workerTimeout, collector)
 
 	kafkaTransformer := Transformer{
 		consumer:    &consumer,
@@ -75,17 +91,21 @@ func NewKafkaTransformer(config Config) (Transformer, error) {
 	var projector pkg.Projector
 
 	if config.ProducerConfig != nil {
-		producer, err := kafka.NewProducer(l, config.ProducerConfig)
+		producer, err := kafka.NewProducer(l, config.ProducerConfig, collector)
 		if err != nil {
 			return Transformer{}, fmt.Errorf("producer creation failed: %w", err)
 		}
 		kafkaTransformer.producer = &producer
 		projector = &producer
+		// no collector when kafka producer, the collect action will be made in the kafka producer
+		// To avoid double collection, the collector is disabled in the projector (which is running the Projector.Project(msg) )
+		collector = nil
 	} else if config.Projector != nil {
+		// otherwise the collector is set when using the provided custom projector
 		projector = config.Projector
 	}
 
-	p := internal.NewProjector(l, projector)
+	p := internal.NewProjector(l, projector, collector)
 	kafkaTransformer.projector = &p
 
 	return kafkaTransformer, nil

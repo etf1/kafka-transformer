@@ -5,7 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/etf1/kafka-transformer/internal/timeout"
+	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
+	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/logger"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
@@ -17,10 +18,11 @@ type Consumer struct {
 	stopChan   chan bool
 	bufferSize int
 	log        logger.Log
+	collector  instrument.Collector
 }
 
 // NewConsumer constructor for Consumer
-func NewConsumer(log logger.Log, topic string, config *confluent.ConfigMap, bufferSize int) (Consumer, error) {
+func NewConsumer(log logger.Log, topic string, config *confluent.ConfigMap, collector instrument.Collector, bufferSize int) (Consumer, error) {
 	c, err := confluent.NewConsumer(config)
 
 	if err != nil {
@@ -33,6 +35,7 @@ func NewConsumer(log logger.Log, topic string, config *confluent.ConfigMap, buff
 		stopChan:   make(chan bool, 1),
 		bufferSize: bufferSize,
 		log:        log,
+		collector:  collector,
 	}, nil
 }
 
@@ -53,15 +56,14 @@ func (c *Consumer) Run(wg *sync.WaitGroup) (chan *confluent.Message, error) {
 
 	go func() {
 		defer wg.Done()
-		defer timeout.WithTimeout(20*time.Second, func() interface{} {
+		defer func() {
 			log.Println("stopping consumer")
 			close(outChan)
 			err := c.consumer.Close()
 			if err != nil {
 				c.log.Errorf("error when closing consumer: %v", err)
 			}
-			return nil
-		})
+		}()
 
 		for {
 			select {
@@ -69,19 +71,28 @@ func (c *Consumer) Run(wg *sync.WaitGroup) (chan *confluent.Message, error) {
 				log.Println("received STOP signal, terminating")
 				return
 			default:
+				start := time.Now()
 				ev := c.consumer.Poll(100)
 				if ev == nil {
 					continue
 				}
+
 				switch e := ev.(type) {
 				case *confluent.Message:
-					c.log.Debugf("consumer: received message on %s: %s", e.TopicPartition, string(e.Key))
+					msg := e
+					c.collectBefore(msg, start)
+					c.log.Debugf("consumer: received message on %s: %s", e.TopicPartition, string(msg.Key))
+
 					if e.Headers != nil {
-						c.log.Debugf("consumer: with headers: %v", e.Headers)
+						c.log.Debugf("consumer: with headers: %v", msg.Headers)
 					}
-					outChan <- e
+					outChan <- msg
+
+					c.collectAfter(msg, nil, start)
 				case confluent.Error:
 					c.log.Errorf("consumer: received an error with code %v: %v", e.Code(), e)
+					c.collectAfter(nil, err, start)
+
 					if e.Code() == confluent.ErrAllBrokersDown {
 						return
 					}
@@ -94,4 +105,19 @@ func (c *Consumer) Run(wg *sync.WaitGroup) (chan *confluent.Message, error) {
 	}()
 
 	return outChan, nil
+}
+
+func (c *Consumer) collectBefore(msg *confluent.Message, start time.Time) {
+	if msg != nil {
+		th := _instrument.TimeHolder{
+			ConsumeStart: start,
+		}
+		msg.Opaque = th
+	}
+	c.collector.Before(msg, instrument.OverallTime, start)
+	c.collector.Before(msg, instrument.KafkaConsumerConsume, start)
+}
+
+func (c *Consumer) collectAfter(msg *confluent.Message, err error, start time.Time) {
+	c.collector.After(msg, instrument.KafkaConsumerConsume, err, start)
 }

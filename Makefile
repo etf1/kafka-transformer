@@ -9,18 +9,19 @@ dev.down:
 	docker-compose -p dev down -v
 
 .PHONY: build
-build: verify
+build:
 	go build -v ./...
+	cd examples && go build -v ./...
 
 .PHONY: verify
-verify:
+verify: build
 	bash ./scripts/check_gofmt.sh
 	bash ./scripts/check_golint.sh
 	bash ./scripts/check_govet.sh
 
 .PHONY: tests
 tests: verify
-	go test -count=1 -v --tags integration ./...
+	go test -count=1 -v -tags integration ./...
 
 .PHONY: tests.docker
 tests.docker:
