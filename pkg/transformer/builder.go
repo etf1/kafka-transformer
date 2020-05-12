@@ -13,67 +13,91 @@ import (
 )
 
 type KafkaTransformerBuilder struct {
-	logger      logger.Log
-	collector   instrument.Collector
-	consumer    *kafka.Consumer
-	producer    *kafka.Producer
-	transformer *internal.Transformer
-	decorateProjector *internal.Projector
-	projector         Projector
+	logger    logger.Log
+	collector instrument.Collector
+
+	hydratorFuncList []kafkaTransformerHydratorFunc
 }
 
-func NewKafkaTransformerBuilder() *KafkaTransformerBuilder {
-	return &KafkaTransformerBuilder{}
+type kafkaTransformerHydratorFunc func(kafkaTransformer *KafkaTransformer) error
+
+func (b *KafkaTransformerBuilder) addBuildFunc(buildFunc kafkaTransformerHydratorFunc) {
+	b.hydratorFuncList = append(b.hydratorFuncList, buildFunc)
 }
 
-func (b *KafkaTransformerBuilder) AddLogger(l logger.Log) {
-	b.logger = l
-}
+func (b *KafkaTransformerBuilder) SetConsumer(sourceTopic string, configConsumer *confluent.ConfigMap, bufferSizeConsumer int) *KafkaTransformerBuilder {
+	f := func(kafkaTransformer *KafkaTransformer) error {
+		consumer, err := kafka.NewConsumer(b.logger, sourceTopic, configConsumer, b.collector, bufferSizeConsumer)
+		if err != nil {
+			return fmt.Errorf("consumer creation failed: %w", err)
+		}
 
-func (b *KafkaTransformerBuilder) AddCollector(collector instrument.Collector) {
-	b.collector = collector
-}
-
-func (b *KafkaTransformerBuilder) AddConsumer(config *confluent.ConfigMap, sourceTopic string, bufferSize int) error {
-	consumer, err := kafka.NewConsumer(b.logger, sourceTopic, config, b.collector, bufferSize)
-	if err != nil {
-		return fmt.Errorf("consumer creation failed: %w", err)
+		kafkaTransformer.Consumer = consumer
+		return nil
 	}
 
-	b.consumer = consumer
-	return nil
+	b.addBuildFunc(f)
+	return b
 }
 
-func (b *KafkaTransformerBuilder) AddProducer(producerConfig *confluent.ConfigMap) error {
-	producer, err := kafka.NewProducer(b.logger, producerConfig, b.collector)
-	if err != nil {
-		return fmt.Errorf("producer creation failed: %w", err)
+func (b *KafkaTransformerBuilder) SetProducer(producerConfig *confluent.ConfigMap) *KafkaTransformerBuilder {
+	f := func(kafkaTransformer *KafkaTransformer) error {
+		producer, err := kafka.NewProducer(b.logger, producerConfig, b.collector)
+		if err != nil {
+			return fmt.Errorf("producer creation failed: %w", err)
+		}
+
+		kafkaTransformer.Producer = producer
+
+		// no collector when kafka producer, the collect action will be made in the kafka producer
+		// To avoid double collection, the collector is disabled in the projector (which is running the Projector.Project(msg) )
+		kafkaTransformer.Projector = internal.NewProjector(b.logger, producer, nil)
+		return nil
 	}
 
-	b.producer = producer
-	// no collector when kafka producer, the collect action will be made in the kafka producer
-	// To avoid double collection, the collector is disabled in the projector (which is running the Projector.Project(msg) )
-	// b.collector = nil
-
-	b.decorateProjector = internal.NewProjector(b.logger, producer, b.collector)
-
-	return nil
+	b.addBuildFunc(f)
+	return b
 }
 
-func (b *KafkaTransformerBuilder) AddTransformer(transformer Transformer, workerTimeout time.Duration, bufferSize int) {
-	b.transformer = internal.NewTransformer(b.logger, transformer, bufferSize, workerTimeout, b.collector)
+func (b *KafkaTransformerBuilder) SetTransformer(transformer Transformer, workerTimeout time.Duration, bufferSize int) *KafkaTransformerBuilder {
+	f := func(kafkaTransformer *KafkaTransformer) error {
+		kafkaTransformer.Transformer = internal.NewTransformer(b.logger, transformer, bufferSize, workerTimeout, b.collector)
+		return nil
+	}
+
+	b.addBuildFunc(f)
+	return b
 }
 
-func (b *KafkaTransformerBuilder) AddProjector(projector Projector) {
-	b.decorateProjector = internal.NewProjector(b.logger, projector, b.collector)
+func (b *KafkaTransformerBuilder) SetProjector(projector Projector) *KafkaTransformerBuilder {
+	f := func(kafkaTransformer *KafkaTransformer) error {
+		kafkaTransformer.Projector = internal.NewProjector(b.logger, projector, b.collector)
+		return nil
+	}
+
+	b.addBuildFunc(f)
+	return b
 }
 
-func (b *KafkaTransformerBuilder) Build() *KafkaTransformer {
-	return &KafkaTransformer{
-		consumer:    b.consumer,
-		producer:    b.producer,
-		transformer: b.transformer,
-		projector:   b.decorateProjector,
-		wg:          &sync.WaitGroup{},
+func (b *KafkaTransformerBuilder) Build() (*KafkaTransformer, error) {
+	kafkaTransformer := &KafkaTransformer{
+		wg: &sync.WaitGroup{},
+	}
+
+	for _, hydratorFunc := range b.hydratorFuncList {
+		err := hydratorFunc(kafkaTransformer)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return kafkaTransformer, nil
+}
+
+func NewKafkaTransformerBuilder(logger logger.Log, collector instrument.Collector) *KafkaTransformerBuilder {
+	return &KafkaTransformerBuilder{
+		logger: logger,
+		collector: collector,
+		hydratorFuncList: []kafkaTransformerHydratorFunc{},
 	}
 }

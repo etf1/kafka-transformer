@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	transformer2 "github.com/etf1/kafka-transformer/pkg/transformer"
+	"github.com/etf1/kafka-transformer/pkg/transformer"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
@@ -21,39 +21,34 @@ func main() {
 	defer redisProjector.Close()
 
 	broker := "localhost:9092"
-	consumerConfig := &confluent.ConfigMap{
+	cfg := transformer.NewConfig().FromTopic("source-topic", &confluent.ConfigMap{
 		"bootstrap.servers":     broker,
 		"broker.address.family": "v4",
 		"group.id":              "custom-projector",
 		"session.timeout.ms":    6000,
 		"auto.offset.reset":     "earliest",
-	}
+	}).ToProjector(redisProjector)
 
-	transformer, err := transformer2.NewKafkaTransformer(
-		"source-topic",
-		consumerConfig,
-		transformer2.WithProjector(redisProjector),
-	)
+	t, err := transformer.NewKafkaTransformer(cfg)
 
 	if err != nil {
-		log.Fatalf("failed to create transformer: %v", err)
+		log.Fatalf("failed to create t: %v", err)
 	}
 
 	// Graceful shutdown
 	exitchan := make(chan bool, 1)
 
 	go func() {
-		if err = transformer.Run(); err != nil {
-			log.Printf("failed to start transformer: %v", err)
+		if err = t.Run(); err != nil {
+			log.Printf("failed to start t: %v", err)
 		}
 		exitchan <- true
 	}()
 
 	select {
 	case <-sigchan:
-		transformer.Stop()
+		t.Stop()
 	case <-exitchan:
-		log.Printf("unexpected exit of the kafka transformer ...")
+		log.Printf("unexpected exit of the kafka t ...")
 	}
-
 }

@@ -35,46 +35,42 @@ func NewConfig() *Config {
 	}
 }
 
-type configFunc func(*Config)
-
-func WithLogger(l logger.Log) configFunc {
-	return func(config *Config) {
-		config.Log = l
-	}
+func (c *Config) WithLogger(l logger.Log) *Config {
+	c.Log = l
+	return c
 }
 
-func WithCollector(collector instrument.Collector) configFunc {
-	return func(config *Config) {
-		config.Collector = collector
-	}
+func (c *Config) WithCollector(collector instrument.Collector) *Config {
+	c.Collector = collector
+	return c
 }
 
-func WithProducer(producerConfig *confluent.ConfigMap) configFunc {
-	return func(config *Config) {
-		config.ProducerConfig = producerConfig
-	}
+
+func (c *Config) WithTransformer(transformer Transformer) *Config {
+	c.Transformer = transformer
+	return c
 }
 
-func WithTransformer(transformer Transformer) configFunc {
-	return func(config *Config) {
-		config.Transformer = transformer
-	}
+func (c *Config) WithBufferSize(bufferSize int) *Config {
+	c.BufferSize = bufferSize
+	return c
 }
 
-func WithProjector(projector Projector) configFunc {
-	return func(config *Config) {
-		config.Projector = projector
-	}
+func (c *Config) WithTimeout(timeout time.Duration) *Config {
+	c.WorkerTimeout = timeout
+	return c
 }
 
-func WithBufferSize(bufferSize int) configFunc {
-	return func(config *Config) {
-		config.BufferSize = bufferSize
-	}
+func (c *Config) ToProducer(producerConfig *confluent.ConfigMap) *Config {
+	c.ProducerConfig = producerConfig
+	return c
 }
 
-func WithTimeout(timeout time.Duration) configFunc {
-	return func(config *Config) {
-		config.WorkerTimeout = timeout
-	}
+func (c *Config) ToProjector(projector Projector) *Config {
+	c.Projector = projector
+	return c
+}
+
+func (c *Config) FromTopic(topic string, config *confluent.ConfigMap) *Config {
+	return c
 }
