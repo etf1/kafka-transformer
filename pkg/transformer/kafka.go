@@ -12,7 +12,7 @@ import (
 
 // Transformer is the orchestrator ot the tree main components: consumer, transformer, producer
 type KafkaTransformer struct {
-	wg          *sync.WaitGroup
+	Wg          *sync.WaitGroup
 
 	Consumer    *kafka.Consumer
 	Producer    *kafka.Producer

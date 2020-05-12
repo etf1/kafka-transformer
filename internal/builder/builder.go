@@ -22,7 +22,7 @@ type KafkaTransformerBuilder struct {
 
 type kafkaTransformerHydratorFunc func(kafkaTransformer *transformer.KafkaTransformer) error
 
-func (b *KafkaTransformerBuilder) addBuildFunc(buildFunc kafkaTransformerHydratorFunc) {
+func (b *KafkaTransformerBuilder) addHydratorFunc(buildFunc kafkaTransformerHydratorFunc) {
 	b.hydratorFuncList = append(b.hydratorFuncList, buildFunc)
 }
 
@@ -37,7 +37,7 @@ func (b *KafkaTransformerBuilder) SetConsumer(sourceTopic string, configConsumer
 		return nil
 	}
 
-	b.addBuildFunc(f)
+	b.addHydratorFunc(f)
 	return b
 }
 
@@ -56,17 +56,17 @@ func (b *KafkaTransformerBuilder) SetProducer(producerConfig *confluent.ConfigMa
 		return nil
 	}
 
-	b.addBuildFunc(f)
+	b.addHydratorFunc(f)
 	return b
 }
 
-func (b *KafkaTransformerBuilder) SetTransformer(transformer transformer.Transformer, workerTimeout time.Duration, bufferSize int) *KafkaTransformerBuilder {
+func (b *KafkaTransformerBuilder) SetTransformer(t transformer.Transformer, workerTimeout time.Duration, bufferSize int) *KafkaTransformerBuilder {
 	f := func(kafkaTransformer *transformer.KafkaTransformer) error {
-		kafkaTransformer.Transformer = internal.NewTransformer(b.logger, transformer, bufferSize, workerTimeout, b.collector)
+		kafkaTransformer.Transformer = internal.NewTransformer(b.logger, t, bufferSize, workerTimeout, b.collector)
 		return nil
 	}
 
-	b.addBuildFunc(f)
+	b.addHydratorFunc(f)
 	return b
 }
 
@@ -76,13 +76,13 @@ func (b *KafkaTransformerBuilder) SetProjector(projector transformer.Projector) 
 		return nil
 	}
 
-	b.addBuildFunc(f)
+	b.addHydratorFunc(f)
 	return b
 }
 
 func (b *KafkaTransformerBuilder) Build() (*transformer.KafkaTransformer, error) {
 	kafkaTransformer := &transformer.KafkaTransformer{
-		wg: &sync.WaitGroup{},
+		Wg: &sync.WaitGroup{},
 	}
 
 	for _, hydratorFunc := range b.hydratorFuncList {
