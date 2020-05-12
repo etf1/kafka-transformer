@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/etf1/kafka-transformer/internal/builder"
 	internal "github.com/etf1/kafka-transformer/internal/transformer"
 	"github.com/etf1/kafka-transformer/internal/transformer/kafka"
 )
@@ -21,19 +22,19 @@ type KafkaTransformer struct {
 
 // NewKafkaTransformer constructor for Transformer
 func NewKafkaTransformer(config *Config) (*KafkaTransformer, error) {
-	builder := NewKafkaTransformerBuilder(config.Log, config.Collector)
-	builder.SetConsumer(config.SourceTopic, config.ConsumerConfig, config.BufferSize).
+	b := builder.NewKafkaTransformerBuilder(config.Log, config.Collector)
+	b.SetConsumer(config.SourceTopic, config.ConsumerConfig, config.BufferSize).
 		SetTransformer(config.Transformer, config.WorkerTimeout, config.BufferSize)
 
 	if config.ProducerConfig != nil {
-		builder.SetProducer(config.ProducerConfig)
+		b.SetProducer(config.ProducerConfig)
 	}
 
 	if config.Projector != nil {
-		builder.SetProjector(config.Projector)
+		b.SetProjector(config.Projector)
 	}
 
-	return builder.Build()
+	return b.Build()
 }
 
 // Stop will stop Transformer components (consumer, transformer, producer)
