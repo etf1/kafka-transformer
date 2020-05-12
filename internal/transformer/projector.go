@@ -21,8 +21,8 @@ type Projector struct {
 }
 
 // NewProjector is the constructor for a Projector
-func NewProjector(log logger.Log, projector pkg.Projector, collector instrument.Collector) Projector {
-	return Projector{
+func NewProjector(log logger.Log, projector pkg.Projector, collector instrument.Collector) *Projector {
+	return &Projector{
 		projector: projector,
 		log:       log,
 		collector: collector,

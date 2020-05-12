@@ -5,7 +5,7 @@ package test
 import (
 	"testing"
 
-	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
+	transformer2 "github.com/etf1/kafka-transformer/pkg/transformer"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
@@ -14,13 +14,13 @@ func TestTransformer_default(t *testing.T) {
 	srcTopic := getTopic(t, "source-topic")
 	dstTopic := srcTopic + "-passthrough"
 
-	config := kafka.Config{
+	config := transformer2.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
 		ProducerConfig: getProducerConfig(),
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -43,14 +43,14 @@ func TestTransformer_duplicator(t *testing.T) {
 	srcTopic := getTopic(t, "source-topic")
 	dstTopic := srcTopic + "-passthrough"
 
-	config := kafka.Config{
+	config := transformer2.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
 		ProducerConfig: getProducerConfig(),
 		Transformer:    NewDuplicatorTransformer(),
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -81,14 +81,14 @@ func TestTransformer_recover_panic(t *testing.T) {
 	srcTopic := getTopic(t, "source-topic")
 	dstTopic := srcTopic + "-passthrough"
 
-	config := kafka.Config{
+	config := transformer2.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
 		ProducerConfig: getProducerConfig(),
 		Transformer:    NewUnstableTransformer(),
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -115,14 +115,14 @@ func TestTransformer_workers_ordering(t *testing.T) {
 	srcTopic := getTopic(t, "source-topic")
 	dstTopic := srcTopic + "-passthrough"
 
-	config := kafka.Config{
+	config := transformer2.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
 		ProducerConfig: getProducerConfig(),
 		BufferSize:     10,
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestTransformer_opaque_should_be_kept(t *testing.T) {
 	srcTopic := getTopic(t, "source-topic")
 
 	projector := NewSliceProjector()
-	config := kafka.Config{
+	config := transformer2.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
 		Transformer:    NewOpaqueTransformer(),
@@ -156,7 +156,7 @@ func TestTransformer_opaque_should_be_kept(t *testing.T) {
 		BufferSize:     10,
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

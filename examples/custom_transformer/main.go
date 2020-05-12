@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
+	transformer2 "github.com/etf1/kafka-transformer/pkg/transformer"
 	"github.com/sirupsen/logrus"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
@@ -21,23 +21,21 @@ func main() {
 	myLogger := myLogger{}
 
 	broker := "localhost:9092"
-	config := kafka.Config{
-		SourceTopic: "source-topic",
-		Log:         myLogger,
-		ConsumerConfig: &confluent.ConfigMap{
-			"bootstrap.servers":     broker,
-			"broker.address.family": "v4",
-			"group.id":              "custom-transformer",
-			"session.timeout.ms":    6000,
-			"auto.offset.reset":     "earliest",
-		},
-		Transformer: headerTransformer{myLogger},
-		ProducerConfig: &confluent.ConfigMap{
-			"bootstrap.servers": broker,
-		},
+	consumerConfig := &confluent.ConfigMap{
+		"bootstrap.servers":     broker,
+		"broker.address.family": "v4",
+		"group.id":              "custom-transformer",
+		"session.timeout.ms":    6000,
+		"auto.offset.reset":     "earliest",
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(
+		"source-topic",
+		consumerConfig,
+		transformer2.WithLogger(myLogger),
+		transformer2.WithTransformer(headerTransformer{myLogger}),
+		transformer2.WithProducer(&confluent.ConfigMap{"bootstrap.servers": broker}),
+	)
 	if err != nil {
 		log.Fatalf("failed to create transformer: %v", err)
 	}

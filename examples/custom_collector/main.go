@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
+	transformer2 "github.com/etf1/kafka-transformer/pkg/transformer"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -18,22 +18,20 @@ func main() {
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
 	broker := "localhost:9092"
-	config := kafka.Config{
-		SourceTopic: "source-topic",
-		ConsumerConfig: &confluent.ConfigMap{
-			"bootstrap.servers":     broker,
-			"broker.address.family": "v4",
-			"group.id":              "custom-transformer",
-			"session.timeout.ms":    6000,
-			"auto.offset.reset":     "earliest",
-		},
-		ProducerConfig: &confluent.ConfigMap{
-			"bootstrap.servers": broker,
-		},
-		Collector: NewCollector("custom_collector"),
+	consumerConfig := &confluent.ConfigMap{
+		"bootstrap.servers":     broker,
+		"broker.address.family": "v4",
+		"group.id":              "custom-transformer",
+		"session.timeout.ms":    6000,
+		"auto.offset.reset":     "earliest",
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(
+		"source-topic",
+		consumerConfig,
+		transformer2.WithProducer(&confluent.ConfigMap{"bootstrap.servers": broker}),
+		transformer2.WithCollector(NewCollector("custom_collector")),
+	)
 	if err != nil {
 		log.Fatalf("failed to create transformer: %v", err)
 	}

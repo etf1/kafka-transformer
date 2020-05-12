@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
+	transformer2 "github.com/etf1/kafka-transformer/pkg/transformer"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
@@ -21,19 +21,20 @@ func main() {
 	defer redisProjector.Close()
 
 	broker := "localhost:9092"
-	config := kafka.Config{
-		SourceTopic: "source-topic",
-		ConsumerConfig: &confluent.ConfigMap{
-			"bootstrap.servers":     broker,
-			"broker.address.family": "v4",
-			"group.id":              "custom-projector",
-			"session.timeout.ms":    6000,
-			"auto.offset.reset":     "earliest",
-		},
-		Projector: redisProjector,
+	consumerConfig := &confluent.ConfigMap{
+		"bootstrap.servers":     broker,
+		"broker.address.family": "v4",
+		"group.id":              "custom-projector",
+		"session.timeout.ms":    6000,
+		"auto.offset.reset":     "earliest",
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(
+		"source-topic",
+		consumerConfig,
+		transformer2.WithProjector(redisProjector),
+	)
+
 	if err != nil {
 		log.Fatalf("failed to create transformer: %v", err)
 	}
