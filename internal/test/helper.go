@@ -24,17 +24,11 @@ func (d dummyTransformer) Transform(src *confluent.Message) (*confluent.Message,
 }
 
 func isRunningInDocker() bool {
-	if _, err := os.Stat("/proc/self/cgroup"); os.IsNotExist(err) {
+	if _, err := os.Stat("/.dockerenv"); os.IsNotExist(err) {
 		return false
 	}
 
-	content, err := ioutil.ReadFile("/proc/self/cgroup")
-	if err != nil {
-		log.Print(err)
-		return false
-	}
-
-	return strings.Contains(string(content), "docker")
+	return true
 }
 
 func getTopic(t *testing.T, prefix string) string {
