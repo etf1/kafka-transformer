@@ -3,13 +3,10 @@ package test
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"math/rand"
 	"os"
 	"reflect"
 	"strconv"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
