@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
+	"github.com/etf1/kafka-transformer/pkg/transformer"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -18,22 +18,17 @@ func main() {
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
 	broker := "localhost:9092"
-	config := kafka.Config{
-		SourceTopic: "source-topic",
-		ConsumerConfig: &confluent.ConfigMap{
-			"bootstrap.servers":     broker,
-			"broker.address.family": "v4",
-			"group.id":              "custom-transformer",
-			"session.timeout.ms":    6000,
-			"auto.offset.reset":     "earliest",
-		},
-		ProducerConfig: &confluent.ConfigMap{
-			"bootstrap.servers": broker,
-		},
-		Collector: NewCollector("custom_collector"),
-	}
+	cfg := transformer.NewConfig().FromTopic("source-topic", &confluent.ConfigMap{
+		"bootstrap.servers":     broker,
+		"broker.address.family": "v4",
+		"group.id":              "custom-transformer",
+		"session.timeout.ms":    6000,
+		"auto.offset.reset":     "earliest",
+	}).
+		WithCollector(NewCollector("custom_collector")).
+		ToProducer(&confluent.ConfigMap{"bootstrap.servers": broker})
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	t, err := transformer.NewKafkaTransformer(cfg)
 	if err != nil {
 		log.Fatalf("failed to create transformer: %v", err)
 	}
@@ -48,7 +43,7 @@ func main() {
 	exitchan := make(chan bool, 1)
 
 	go func() {
-		if err := transformer.Run(); err != nil {
+		if err := t.Run(); err != nil {
 			log.Printf("failed to start transformer: %v", err)
 		}
 		exitchan <- true
@@ -56,7 +51,7 @@ func main() {
 
 	select {
 	case <-sigchan:
-		transformer.Stop()
+		t.Stop()
 	case <-exitchan:
 		log.Printf("unexpected exit of the kafka transformer ...")
 	}

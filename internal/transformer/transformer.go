@@ -22,8 +22,8 @@ type Transformer struct {
 }
 
 // NewTransformer constructor for Transformer, bufferSize is the size of the buffered channel
-func NewTransformer(log logger.Log, transformer transformer.Transformer, bufferSize int, workerTimeout time.Duration, collector instrument.Collector) Transformer {
-	return Transformer{
+func NewTransformer(log logger.Log, transformer transformer.Transformer, bufferSize int, workerTimeout time.Duration, collector instrument.Collector) *Transformer {
+	return &Transformer{
 		transformer:   transformer,
 		bufferSize:    bufferSize,
 		log:           log,

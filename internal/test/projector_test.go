@@ -5,7 +5,7 @@ package test
 import (
 	"testing"
 
-	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
+	transformer2 "github.com/etf1/kafka-transformer/pkg/transformer"
 )
 
 // Default case with a simple projector
@@ -13,14 +13,14 @@ func TestProjector_default(t *testing.T) {
 	srcTopic := getTopic(t, "source-topic")
 
 	projector := NewSliceProjector()
-	config := kafka.Config{
+	config := transformer2.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
 		Projector:      projector,
 		BufferSize:     10,
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -43,14 +43,14 @@ func TestProjector_recover_panic(t *testing.T) {
 	srcTopic := getTopic(t, "source-topic")
 
 	projector := NewSliceProjector()
-	config := kafka.Config{
+	config := transformer2.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
 		Projector:      projector,
 		BufferSize:     10,
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

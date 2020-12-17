@@ -5,7 +5,7 @@ package test
 import (
 	"testing"
 
-	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
+	transformer2 "github.com/etf1/kafka-transformer/pkg/transformer"
 	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
@@ -14,7 +14,7 @@ func TestCollector_default(t *testing.T) {
 	srcTopic := getTopic(t, "source-topic")
 
 	collector := NewSliceCollector()
-	config := kafka.Config{
+	config := transformer2.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
 		ProducerConfig: getProducerConfig(),
@@ -22,7 +22,7 @@ func TestCollector_default(t *testing.T) {
 		Collector:      collector,
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestCollector_with_custom_projector(t *testing.T) {
 
 	projector := NewSliceProjector()
 	collector := NewSliceCollector()
-	config := kafka.Config{
+	config := transformer2.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
 		Projector:      projector,
@@ -55,7 +55,7 @@ func TestCollector_with_custom_projector(t *testing.T) {
 		Collector:      collector,
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestCollector_recover_transformer_panic(t *testing.T) {
 	srcTopic := getTopic(t, "source-topic")
 
 	collector := NewSliceCollector()
-	config := kafka.Config{
+	config := transformer2.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
 		ProducerConfig: getProducerConfig(),
@@ -88,7 +88,7 @@ func TestCollector_recover_transformer_panic(t *testing.T) {
 		Collector:      collector,
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -126,14 +126,14 @@ func TestCollector_recover_project_panic(t *testing.T) {
 
 	collector := NewSliceCollector()
 	projector := NewSliceProjector()
-	config := kafka.Config{
+	config := transformer2.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
 		Projector:      projector,
 		Collector:      collector,
 	}
 
-	transformer, err := kafka.NewKafkaTransformer(config)
+	transformer, err := transformer2.NewKafkaTransformer(config)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

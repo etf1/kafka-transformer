@@ -22,14 +22,14 @@ type Consumer struct {
 }
 
 // NewConsumer constructor for Consumer
-func NewConsumer(log logger.Log, topic string, config *confluent.ConfigMap, collector instrument.Collector, bufferSize int) (Consumer, error) {
+func NewConsumer(log logger.Log, topic string, config *confluent.ConfigMap, collector instrument.Collector, bufferSize int) (*Consumer, error) {
 	c, err := confluent.NewConsumer(config)
 
 	if err != nil {
-		return Consumer{}, err
+		return &Consumer{}, err
 	}
 
-	return Consumer{
+	return &Consumer{
 		topic:      topic,
 		consumer:   c,
 		stopChan:   make(chan bool, 1),

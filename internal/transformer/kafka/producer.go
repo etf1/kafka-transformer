@@ -19,14 +19,14 @@ type Producer struct {
 }
 
 // NewProducer constructor for Producer
-func NewProducer(l logger.Log, config *confluent.ConfigMap, collector instrument.Collector) (Producer, error) {
+func NewProducer(l logger.Log, config *confluent.ConfigMap, collector instrument.Collector) (*Producer, error) {
 	kafkaProducer, err := confluent.NewProducer(config)
 
 	if err != nil {
-		return Producer{}, err
+		return &Producer{}, err
 	}
 
-	p := Producer{
+	p := &Producer{
 		producer:  kafkaProducer,
 		log:       l,
 		collector: collector,
