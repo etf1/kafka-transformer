@@ -5,6 +5,8 @@ services:
       context: .
       dockerfile: Dockerfile.test
     command: ["bash", "./scripts/run_tests.sh"]
+    environment: 
+      - KAFKA_BOOTSTRAP_SERVER=kafka:29092
     depends_on:
       - kafka
 

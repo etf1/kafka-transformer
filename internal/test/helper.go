@@ -3,12 +3,9 @@ package test
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"math/rand"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -21,28 +18,15 @@ func (d dummyTransformer) Transform(src *confluent.Message) (*confluent.Message,
 	return src, nil
 }
 
-func isRunningInDocker() bool {
-	if _, err := os.Stat("/proc/self/cgroup"); os.IsNotExist(err) {
-		return false
-	}
-
-	content, err := ioutil.ReadFile("/proc/self/cgroup")
-	if err != nil {
-		log.Print(err)
-		return false
-	}
-
-	return strings.Contains(string(content), "docker")
-}
-
 func getTopic(t *testing.T, prefix string) string {
 	rand.Seed(time.Now().UnixNano())
 	return fmt.Sprintf("%s-%d", prefix, rand.Intn(1000000))
 }
 
 func getBootstrapServers() string {
-	if isRunningInDocker() {
-		return "kafka:29092"
+	v := os.Getenv("KAFKA_BOOTSTRAP_SERVER")
+	if v != "" {
+		return v
 	}
 	return "localhost:9092"
 }
@@ -63,7 +47,7 @@ func getConsumerConfig(t *testing.T, group string) *confluent.ConfigMap {
 	}
 }
 
-func getProducerConfig() *confluent.ConfigMap {
+func getProducerConfig(t *testing.T) *confluent.ConfigMap {
 	return &confluent.ConfigMap{
 		"bootstrap.servers": getBootstrapServers(),
 	}
@@ -77,7 +61,7 @@ func message(topic string, value string) *confluent.Message {
 }
 
 func produceMessages(t *testing.T, messages []*confluent.Message) {
-	p, err := confluent.NewProducer(getProducerConfig())
+	p, err := confluent.NewProducer(getProducerConfig(t))
 	if err != nil {
 		t.Fatalf("failed to create producer: %s\n", err)
 	}

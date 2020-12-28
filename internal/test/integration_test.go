@@ -15,7 +15,7 @@ func TestPassThroughTransformer(t *testing.T) {
 	config := kafka.Config{
 		SourceTopic:    srcTopic,
 		ConsumerConfig: getConsumerConfig(t, "integration-test-group"),
-		ProducerConfig: getProducerConfig(),
+		ProducerConfig: getProducerConfig(t),
 	}
 
 	transformer, err := kafka.NewKafkaTransformer(config)
