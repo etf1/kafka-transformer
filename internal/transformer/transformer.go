@@ -4,10 +4,10 @@ import (
 	"log"
 	"sync"
 
+	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/etf1/kafka-transformer/pkg/logger"
 	"github.com/etf1/kafka-transformer/pkg/transformer"
 	pkg "github.com/etf1/kafka-transformer/pkg/transformer"
-	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 // Transformer represents the transformer which will perform the custom transformation

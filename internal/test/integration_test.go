@@ -3,8 +3,8 @@ package test
 import (
 	"testing"
 
+	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/etf1/kafka-transformer/pkg/kafka"
-	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 func TestPassThroughTransformer(t *testing.T) {

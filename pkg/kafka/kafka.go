@@ -5,11 +5,11 @@ import (
 	"log"
 	"sync"
 
+	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	internal "github.com/etf1/kafka-transformer/internal/transformer"
 	"github.com/etf1/kafka-transformer/internal/transformer/kafka"
 	"github.com/etf1/kafka-transformer/pkg/logger"
 	"github.com/etf1/kafka-transformer/pkg/transformer"
-	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 // Config is the configuration used by KafkaTransformer

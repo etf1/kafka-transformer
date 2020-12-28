@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
+	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/etf1/kafka-transformer/internal/timeout"
 	"github.com/etf1/kafka-transformer/pkg/logger"
-	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 // Consumer represents the kafka consumer which will consume messages from a topic

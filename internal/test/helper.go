@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
+	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 type dummyTransformer struct{}
