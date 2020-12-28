@@ -21,16 +21,20 @@ func (d dummyTransformer) Transform(src *confluent.Message) (*confluent.Message,
 	return src, nil
 }
 
-func isRunningInDocker() bool {
+func isRunningInDocker(t *testing.T) bool {
 	if _, err := os.Stat("/proc/self/cgroup"); os.IsNotExist(err) {
+		t.Logf("/proc/self/cgroup doesn't exists")
 		return false
 	}
 
 	content, err := ioutil.ReadFile("/proc/self/cgroup")
 	if err != nil {
+		t.Logf("Failed to read file /proc/self/cgroup : %v", err)
 		log.Print(err)
 		return false
 	}
+
+	t.Logf("cgroup = %s", string(content))
 
 	return strings.Contains(string(content), "docker")
 }
@@ -40,8 +44,8 @@ func getTopic(t *testing.T, prefix string) string {
 	return fmt.Sprintf("%s-%d", prefix, rand.Intn(1000000))
 }
 
-func getBootstrapServers() string {
-	if isRunningInDocker() {
+func getBootstrapServers(t *testing.T) string {
+	if isRunningInDocker(t) {
 		return "kafka:29092"
 	}
 	return "localhost:9092"
@@ -50,7 +54,7 @@ func getBootstrapServers() string {
 func getConsumerConfig(t *testing.T, group string) *confluent.ConfigMap {
 	rand.Seed(time.Now().UnixNano())
 
-	bs := getBootstrapServers()
+	bs := getBootstrapServers(t)
 
 	t.Logf("bootstrap server : %s", bs)
 
@@ -63,9 +67,9 @@ func getConsumerConfig(t *testing.T, group string) *confluent.ConfigMap {
 	}
 }
 
-func getProducerConfig() *confluent.ConfigMap {
+func getProducerConfig(t *testing.T) *confluent.ConfigMap {
 	return &confluent.ConfigMap{
-		"bootstrap.servers": getBootstrapServers(),
+		"bootstrap.servers": getBootstrapServers(t),
 	}
 }
 
@@ -77,7 +81,7 @@ func message(topic string, value string) *confluent.Message {
 }
 
 func produceMessages(t *testing.T, messages []*confluent.Message) {
-	p, err := confluent.NewProducer(getProducerConfig())
+	p, err := confluent.NewProducer(getProducerConfig(t))
 	if err != nil {
 		t.Fatalf("failed to create producer: %s\n", err)
 	}
