@@ -50,8 +50,12 @@ func getBootstrapServers() string {
 func getConsumerConfig(t *testing.T, group string) *confluent.ConfigMap {
 	rand.Seed(time.Now().UnixNano())
 
+	bs := getBootstrapServers()
+
+	t.Logf("bootstrap server : %s", bs)
+
 	return &confluent.ConfigMap{
-		"bootstrap.servers":     getBootstrapServers(),
+		"bootstrap.servers":     bs,
 		"broker.address.family": "v4",
 		"group.id":              fmt.Sprintf("%s-%d", group, rand.Intn(1000000)),
 		"session.timeout.ms":    6000,
@@ -143,12 +147,13 @@ func consumeMessages(t *testing.T, topic string) []*confluent.Message {
 
 	result := make([]*confluent.Message, 0)
 
+loop:
 	for {
 		select {
 		case <-stopChan:
-			return result
+			//return result
+			break loop
 		default:
-			//print(".")
 			ev := c.Poll(100)
 			if ev == nil {
 				continue
