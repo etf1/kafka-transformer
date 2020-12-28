@@ -13,6 +13,6 @@ function wait_for_kafka(){
     done
 }
 
-wait_for_kafka "kafka:29092"
+wait_for_kafka $KAFKA_BOOTSTRAP_SERVER
 
 make tests

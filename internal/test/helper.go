@@ -3,12 +3,9 @@ package test
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"math/rand"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -21,32 +18,15 @@ func (d dummyTransformer) Transform(src *confluent.Message) (*confluent.Message,
 	return src, nil
 }
 
-func isRunningInDocker(t *testing.T) bool {
-	if _, err := os.Stat("/proc/self/cgroup"); os.IsNotExist(err) {
-		t.Logf("/proc/self/cgroup doesn't exists")
-		return false
-	}
-
-	content, err := ioutil.ReadFile("/proc/self/cgroup")
-	if err != nil {
-		t.Logf("Failed to read file /proc/self/cgroup : %v", err)
-		log.Print(err)
-		return false
-	}
-
-	t.Logf("cgroup = %s", string(content))
-
-	return strings.Contains(string(content), "docker")
-}
-
 func getTopic(t *testing.T, prefix string) string {
 	rand.Seed(time.Now().UnixNano())
 	return fmt.Sprintf("%s-%d", prefix, rand.Intn(1000000))
 }
 
-func getBootstrapServers(t *testing.T) string {
-	if isRunningInDocker(t) {
-		return "kafka:29092"
+func getBootstrapServers() string {
+	v := os.Getenv("KAFKA_BOOTSTRAP_SERVER")
+	if v != "" {
+		return v
 	}
 	return "localhost:9092"
 }
@@ -54,7 +34,7 @@ func getBootstrapServers(t *testing.T) string {
 func getConsumerConfig(t *testing.T, group string) *confluent.ConfigMap {
 	rand.Seed(time.Now().UnixNano())
 
-	bs := getBootstrapServers(t)
+	bs := getBootstrapServers()
 
 	t.Logf("bootstrap server : %s", bs)
 
@@ -69,7 +49,7 @@ func getConsumerConfig(t *testing.T, group string) *confluent.ConfigMap {
 
 func getProducerConfig(t *testing.T) *confluent.ConfigMap {
 	return &confluent.ConfigMap{
-		"bootstrap.servers": getBootstrapServers(t),
+		"bootstrap.servers": getBootstrapServers(),
 	}
 }
 
