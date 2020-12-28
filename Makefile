@@ -18,7 +18,7 @@ verify:
 
 .PHONY: tests
 tests: verify
-	go test -count=1 -v --tags integration ./...
+	go test -count=1 -v --tags integration --tags musl ./...
 
 .PHONY: tests.docker
 tests.docker:
