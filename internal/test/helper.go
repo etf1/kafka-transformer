@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
+	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -18,15 +20,22 @@ func (d dummyTransformer) Transform(src *confluent.Message) (*confluent.Message,
 	return src, nil
 }
 
+func isRunningInDocker() bool {
+	if _, err := os.Stat("/.dockerenv"); os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
 func getTopic(t *testing.T, prefix string) string {
 	rand.Seed(time.Now().UnixNano())
 	return fmt.Sprintf("%s-%d", prefix, rand.Intn(1000000))
 }
 
 func getBootstrapServers() string {
-	v := os.Getenv("KAFKA_BOOTSTRAP_SERVER")
-	if v != "" {
-		return v
+	if isRunningInDocker() {
+		return "kafka:29092"
 	}
 	return "localhost:9092"
 }
@@ -34,12 +43,8 @@ func getBootstrapServers() string {
 func getConsumerConfig(t *testing.T, group string) *confluent.ConfigMap {
 	rand.Seed(time.Now().UnixNano())
 
-	bs := getBootstrapServers()
-
-	t.Logf("bootstrap server : %s", bs)
-
 	return &confluent.ConfigMap{
-		"bootstrap.servers":     bs,
+		"bootstrap.servers":     getBootstrapServers(),
 		"broker.address.family": "v4",
 		"group.id":              fmt.Sprintf("%s-%d", group, rand.Intn(1000000)),
 		"session.timeout.ms":    6000,
@@ -47,21 +52,34 @@ func getConsumerConfig(t *testing.T, group string) *confluent.ConfigMap {
 	}
 }
 
-func getProducerConfig(t *testing.T) *confluent.ConfigMap {
+func getProducerConfig() *confluent.ConfigMap {
 	return &confluent.ConfigMap{
 		"bootstrap.servers": getBootstrapServers(),
 	}
 }
 
+var msgID int64
+
 func message(topic string, value string) *confluent.Message {
 	return &confluent.Message{
 		TopicPartition: confluent.TopicPartition{Topic: &topic, Partition: confluent.PartitionAny},
 		Value:          []byte(value),
+		Key:            []byte(strconv.FormatInt(atomic.AddInt64(&msgID, 1), 10)),
 	}
 }
 
+func messages(topic string, count int) []*confluent.Message {
+	messages := make([]*confluent.Message, 0)
+
+	for i := 1; i <= count; i++ {
+		messages = append(messages, message(topic, fmt.Sprintf("message%v", i)))
+	}
+
+	return messages
+}
+
 func produceMessages(t *testing.T, messages []*confluent.Message) {
-	p, err := confluent.NewProducer(getProducerConfig(t))
+	p, err := confluent.NewProducer(getProducerConfig())
 	if err != nil {
 		t.Fatalf("failed to create producer: %s\n", err)
 	}
@@ -87,28 +105,68 @@ func produceMessages(t *testing.T, messages []*confluent.Message) {
 	p.Flush(10000)
 }
 
-func assertEquals(t *testing.T, a, b []*confluent.Message) bool {
+func assertEquals(t *testing.T, a, b []*confluent.Message) {
 	if len(a) != len(b) {
-		t.Logf("messages length not equals, %v != %v", len(a), len(b))
-		return false
+		t.Fatalf("messages length not equals, %v != %v", len(a), len(b))
 	}
 
 	for i, msg := range a {
 		if !reflect.DeepEqual(msg.Headers, b[i].Headers) {
-			t.Logf("headers not equals, %v != %v", msg.Headers, b[i].Headers)
-			return false
+			t.Fatalf("headers not equals, %v != %v", msg.Headers, b[i].Headers)
 		}
 		if !bytes.Equal(msg.Key, b[i].Key) {
-			t.Logf("keys not equals, %v != %v", msg.Key, b[i].Key)
-			return false
+			t.Fatalf("keys not equals, %v != %v", msg.Key, b[i].Key)
 		}
 		if !bytes.Equal(msg.Value, b[i].Value) {
-			t.Logf("values not equals, %v != %v", msg.Value, b[i].Value)
-			return false
+			t.Fatalf("values not equals, %v != %v", string(msg.Value), string(b[i].Value))
 		}
 	}
+}
 
-	return true
+func assertMessageEquals(t *testing.T, m1, m2 *confluent.Message) {
+	if !reflect.DeepEqual(m1.Headers, m2.Headers) {
+		t.Fatalf("headers not equals, %v != %v", m1.Headers, m2.Headers)
+	}
+	if !bytes.Equal(m1.Key, m2.Key) {
+		t.Fatalf("keys not equals, %v != %v", m1.Key, m2.Key)
+	}
+	if !bytes.Equal(m1.Value, m2.Value) {
+		t.Fatalf("values not equals, %v != %v", string(m1.Value), string(m2.Value))
+	}
+}
+
+func assertMessagesinTopic(t *testing.T, topic string, msgs []*confluent.Message) {
+	c, err := confluent.NewConsumer(getConsumerConfig(t, "group"))
+	if err != nil {
+		t.Fatalf("Failed to create consumer: %v", err)
+	}
+	defer c.Close()
+
+	t.Logf("consumer config: %v", getConsumerConfig(t, "group"))
+
+	err = c.SubscribeTopics([]string{topic}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, m := range msgs {
+		msg, err := c.ReadMessage(20 * time.Second)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		assertMessageEquals(t, m, msg)
+	}
+}
+
+func printMessages(t *testing.T, prefix string, msgs []*confluent.Message) {
+	for i, msg := range msgs {
+		if msg == nil {
+			t.Logf("%v: %v: message is nil\n", prefix, i)
+		} else {
+			t.Logf("%v: %v: value:%v\n", prefix, i, string(msg.Value))
+		}
+	}
 }
 
 func consumeMessages(t *testing.T, topic string) []*confluent.Message {
@@ -125,19 +183,18 @@ func consumeMessages(t *testing.T, topic string) []*confluent.Message {
 
 	stopChan := make(chan bool)
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(15 * time.Second)
 		stopChan <- true
 	}()
 
 	result := make([]*confluent.Message, 0)
 
-loop:
 	for {
 		select {
 		case <-stopChan:
-			//return result
-			break loop
+			return result
 		default:
+			//print(".")
 			ev := c.Poll(100)
 			if ev == nil {
 				continue
@@ -152,6 +209,4 @@ loop:
 			}
 		}
 	}
-
-	return result
 }

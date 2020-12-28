@@ -2,71 +2,94 @@ package kafka
 
 import (
 	"log"
-	"sync"
 	"time"
 
 	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
-	"github.com/etf1/kafka-transformer/internal/timeout"
+	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
+	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/logger"
 )
 
 // Producer represents the kafka producer which will produce
-// the transformed message in a topic defined in the Message
+// the transformed message to a topic defined in the Message
 type Producer struct {
-	producer *confluent.Producer
-	log      logger.Log
+	producer  *confluent.Producer
+	log       logger.Log
+	collector instrument.Collector
 }
 
 // NewProducer constructor for Producer
-func NewProducer(log logger.Log, config *confluent.ConfigMap) (Producer, error) {
-	p, err := confluent.NewProducer(config)
+func NewProducer(l logger.Log, config *confluent.ConfigMap, collector instrument.Collector) (Producer, error) {
+	kafkaProducer, err := confluent.NewProducer(config)
 
 	if err != nil {
 		return Producer{}, err
 	}
 
-	return Producer{
-		producer: p,
-		log:      log,
-	}, nil
-}
+	p := Producer{
+		producer:  kafkaProducer,
+		log:       l,
+		collector: collector,
+	}
 
-// Run will start the producer process
-func (p *Producer) Run(wg *sync.WaitGroup, inChan chan *confluent.Message) {
 	go func() {
-		for e := range p.producer.Events() {
+		defer log.Println("kafka producer stopped")
+		for e := range kafkaProducer.Events() {
 			switch ev := e.(type) {
 			case *confluent.Message:
-				m := ev
-				if m.TopicPartition.Error != nil {
-					p.log.Errorf("delivery failed: %v", m.TopicPartition.Error)
+				msg := ev
+				if msg.TopicPartition.Error != nil {
+					p.collectAfter(msg, msg.TopicPartition.Error)
+					l.Errorf("delivery failed: %v", msg.TopicPartition.Error)
 				} else {
-					p.log.Debugf("producer: delivered message to topic %s [%d] at offset %v",
-						*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
+					p.collectAfter(msg, nil)
+					l.Debugf("producer: delivered message to topic %s [%d] at offset %v",
+						*msg.TopicPartition.Topic, msg.TopicPartition.Partition, msg.TopicPartition.Offset)
 				}
 			case confluent.Error:
-				p.log.Errorf("producer: received an error with code %v: %v", ev.Code(), ev)
+				p.collectAfter(nil, ev)
+				l.Errorf("producer: received an error with code %v: %v", ev.Code(), ev)
 			default:
-				p.log.Debugf("producer: ignoring event: %s", ev)
+				l.Debugf("producer: ignoring event: %s", ev)
 			}
 		}
-		log.Println("exiting producer events loop")
 	}()
 
-	go func() {
-		defer wg.Done()
-		defer timeout.WithTimeout(20*time.Second, func() interface{} {
-			log.Println("stopping producer")
-			// Flushing, for remaining messages in internal buffer
-			p.producer.Flush(10000)
-			// This will close .Events channel and stop the previous goroutine
-			p.producer.Close()
-			return nil
-		})
+	return p, nil
+}
 
-		for msg := range inChan {
-			p.producer.ProduceChannel() <- msg
-		}
+// Project implements the Projector interface
+func (p Producer) Project(msg *confluent.Message) {
+	p.collectBefore(msg)
+	p.producer.ProduceChannel() <- msg
+}
 
-	}()
+// Close will close all ressources and the kafka producer
+func (p *Producer) Close() {
+	// This will close .Events channel and stop the previous goroutine
+	defer p.producer.Close()
+	// Flushing, for remaining messages in internal buffer
+	defer p.producer.Flush(10000)
+
+	log.Println("stopping kafka producer")
+}
+
+func (p Producer) collectBefore(msg *confluent.Message) {
+	if msg == nil {
+		return
+	}
+	start := time.Now()
+	th := msg.Opaque.(_instrument.TimeHolder)
+	th.ProjectStart = start
+	msg.Opaque = th
+	p.collector.Before(msg, instrument.KafkaProducerProduce, start)
+}
+
+func (p Producer) collectAfter(msg *confluent.Message, err error) {
+	if msg == nil {
+		return
+	}
+	th := msg.Opaque.(_instrument.TimeHolder)
+	p.collector.After(msg, instrument.KafkaProducerProduce, err, th.ProjectStart)
+	p.collector.After(msg, instrument.OverallTime, err, th.ConsumeStart)
 }

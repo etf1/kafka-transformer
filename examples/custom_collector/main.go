@@ -2,28 +2,24 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
-	"github.com/sirupsen/logrus"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
-	logrus.SetFormatter(&logrus.JSONFormatter{})
-	logrus.SetLevel(logrus.DebugLevel)
-
-	myLogger := myLogger{}
-
 	broker := "localhost:9092"
 	config := kafka.Config{
 		SourceTopic: "source-topic",
-		Log:         myLogger,
 		ConsumerConfig: &confluent.ConfigMap{
 			"bootstrap.servers":     broker,
 			"broker.address.family": "v4",
@@ -31,10 +27,10 @@ func main() {
 			"session.timeout.ms":    6000,
 			"auto.offset.reset":     "earliest",
 		},
-		Transformer: headerTransformer{myLogger},
 		ProducerConfig: &confluent.ConfigMap{
 			"bootstrap.servers": broker,
 		},
+		Collector: NewCollector("custom_collector"),
 	}
 
 	transformer, err := kafka.NewKafkaTransformer(config)
@@ -42,11 +38,17 @@ func main() {
 		log.Fatalf("failed to create transformer: %v", err)
 	}
 
+	// prometheus /metrics endpoint
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		http.ListenAndServe(":8001", nil)
+	}()
+
 	// Graceful shutdown
 	exitchan := make(chan bool, 1)
 
 	go func() {
-		if err = transformer.Run(); err != nil {
+		if err := transformer.Run(); err != nil {
 			log.Printf("failed to start transformer: %v", err)
 		}
 		exitchan <- true
@@ -58,5 +60,4 @@ func main() {
 	case <-exitchan:
 		log.Printf("unexpected exit of the kafka transformer ...")
 	}
-
 }
