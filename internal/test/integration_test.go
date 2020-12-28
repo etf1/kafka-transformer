@@ -2,6 +2,7 @@ package test
 
 import (
 	"testing"
+	"time"
 
 	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/etf1/kafka-transformer/pkg/kafka"
@@ -31,6 +32,8 @@ func TestPassThroughTransformer(t *testing.T) {
 
 	messages := []*confluent.Message{message(srcTopic, "message1"), message(srcTopic, "message2"), message(srcTopic, "message3")}
 	produceMessages(t, messages)
+
+	time.Sleep(5 * time.Second)
 
 	finalMessages := consumeMessages(t, dstTopic)
 
