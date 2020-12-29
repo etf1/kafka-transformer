@@ -1,8 +1,8 @@
 package test
 
 import (
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/etf1/kafka-transformer/pkg/transformer"
-	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 type unstableTransformer struct {

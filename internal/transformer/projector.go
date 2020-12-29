@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
+	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
 	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/logger"
 	pkg "github.com/etf1/kafka-transformer/pkg/transformer"
-	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 // Projector will project kafka message to kafka topic or somewhere else

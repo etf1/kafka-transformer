@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	kafka "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/go-redis/redis/v7"
-	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 // RedisProjector will project message to redis by implementing transformer.Projector interface

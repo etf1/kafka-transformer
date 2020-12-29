@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/etf1/kafka-transformer/pkg/instrument"
-	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 // SliceCollector is a slice implementation of the Collector interface

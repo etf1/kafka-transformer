@@ -1,5 +1,5 @@
 module github.com/etf1/kafka-transformer
 
-go 1.14
+go 1.15
 
-require gopkg.in/confluentinc/confluent-kafka-go.v1 v1.1.0
+require github.com/confluentinc/confluent-kafka-go v1.5.2

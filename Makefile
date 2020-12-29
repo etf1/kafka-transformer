@@ -1,4 +1,4 @@
-GOLANG_VERSION?=1.14
+GOLANG_VERSION?=1.15
 
 .PHONY: dev.up
 dev.up:
@@ -10,8 +10,8 @@ dev.down:
 
 .PHONY: build
 build:
-	go build -v ./...
-	cd examples && go build -v ./...
+	go build -tags musl -v ./...
+	cd examples && go build -v -tags musl ./...
 
 .PHONY: verify
 verify: build
@@ -21,7 +21,7 @@ verify: build
 
 .PHONY: tests
 tests: verify
-	go test -count=1 -v -tags integration ./...
+	go test -count=1 -v -tags integration -tags musl ./...
 
 .PHONY: tests.docker
 tests.docker:

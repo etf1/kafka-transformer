@@ -4,10 +4,10 @@ import (
 	"log"
 	"time"
 
+	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
 	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/logger"
-	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 // Producer represents the kafka producer which will produce

@@ -4,9 +4,9 @@ import (
 	"log"
 	"time"
 
+	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/prometheus/client_golang/prometheus"
-	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 type promCollector struct {

@@ -6,8 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
-	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
 
 func main() {

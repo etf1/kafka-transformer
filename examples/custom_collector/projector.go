@@ -3,7 +3,7 @@ package main
 import (
 	"sync/atomic"
 
-	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
+	kafka "github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 type customProjector struct {

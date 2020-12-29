@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	confluent "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
+	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 type dummyTransformer struct{}
@@ -72,7 +72,7 @@ func messages(topic string, count int) []*confluent.Message {
 	messages := make([]*confluent.Message, 0)
 
 	for i := 1; i <= count; i++ {
-		messages = append(messages, message(topic, "message"+string(i)))
+		messages = append(messages, message(topic, fmt.Sprintf("message%v", i)))
 	}
 
 	return messages
