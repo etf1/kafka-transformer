@@ -71,11 +71,14 @@ You have to provide a configuration `Config`:
 
 ```golang
 type Config struct {
-	SourceTopic    string
-	ConsumerConfig *confluent.ConfigMap
-	ProducerConfig *confluent.ConfigMap
-	Transformer    transformer.Transformer
-	Log            logger.Log
+	AppName               string
+	AppVersion            string
+	OtelCollectorEndpoint string
+	SourceTopic           string
+	ConsumerConfig        *confluent.ConfigMap
+	ProducerConfig        *confluent.ConfigMap
+	Transformer           transformer.Transformer
+	Log                   logger.Log
 }
 ```
 
@@ -198,3 +201,20 @@ for development:
 * to run tests `make tests`
 * to stop local environment, run `make dev.down`
 
+
+# Enable OpenTelemetry
+
+You can enable [OpenTelemetry](https://opentelemetry.io/) tracing of Kafka messages by adding the following configuration fields:
+
+```go
+config := kafka.Config{
+	AppName:               "my-application-name",
+	AppVersion:            "my-application-version",
+	OtelCollectorEndpoint: "localhost:50032",
+	// ...
+}
+
+transformer, err := kafka.NewKafkaTransformer(config)
+// ...
+}
+```

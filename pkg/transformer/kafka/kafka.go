@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
 	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
 	_logger "github.com/etf1/kafka-transformer/internal/logger"
+	"github.com/etf1/kafka-transformer/internal/otel"
 	internal "github.com/etf1/kafka-transformer/internal/transformer"
 	"github.com/etf1/kafka-transformer/internal/transformer/kafka"
 	"github.com/etf1/kafka-transformer/pkg/instrument"
@@ -18,15 +20,18 @@ import (
 
 // Config is the configuration used by KafkaTransformer
 type Config struct {
-	SourceTopic    string
-	BufferSize     int
-	ConsumerConfig *confluent.ConfigMap
-	ProducerConfig *confluent.ConfigMap
-	Transformer    pkg.Transformer
-	Projector      pkg.Projector
-	Log            logger.Log
-	WorkerTimeout  time.Duration
-	Collector      instrument.Collector
+	AppName               string
+	AppVersion            string
+	OtelCollectorEndpoint string
+	SourceTopic           string
+	BufferSize            int
+	ConsumerConfig        *confluent.ConfigMap
+	ProducerConfig        *confluent.ConfigMap
+	Transformer           pkg.Transformer
+	Projector             pkg.Projector
+	Log                   logger.Log
+	WorkerTimeout         time.Duration
+	Collector             instrument.Collector
 }
 
 // Transformer is the orchestrator ot the tree main components: consumer, transformer, producer
@@ -41,7 +46,6 @@ type Transformer struct {
 
 // NewKafkaTransformer constructor for Transformer
 func NewKafkaTransformer(config Config) (Transformer, error) {
-
 	if config.ProducerConfig == nil && config.Projector == nil {
 		return Transformer{}, fmt.Errorf("missing configuration: ProducerConfig or Projector")
 	}
@@ -75,7 +79,25 @@ func NewKafkaTransformer(config Config) (Transformer, error) {
 		workerTimeout = config.WorkerTimeout
 	}
 
-	consumer, err := kafka.NewConsumer(l, config.SourceTopic, config.ConsumerConfig, collector, bufferSize)
+	var options = make([]kafka.Option, 0)
+	if config.OtelCollectorEndpoint != "" {
+		tracerProvider := otel.GetTracerProvider(
+			context.Background(),
+			config.OtelCollectorEndpoint,
+			config.AppName,
+			config.AppVersion,
+		)
+		options = append(options, kafka.WithTracerProvider(tracerProvider))
+	}
+
+	consumer, err := kafka.NewConsumer(
+		l,
+		config.SourceTopic,
+		config.ConsumerConfig,
+		collector,
+		bufferSize,
+		options...,
+	)
 	if err != nil {
 		return Transformer{}, fmt.Errorf("consumer creation failed: %w", err)
 	}
@@ -83,7 +105,7 @@ func NewKafkaTransformer(config Config) (Transformer, error) {
 	transformer := internal.NewTransformer(l, t, bufferSize, workerTimeout, collector)
 
 	kafkaTransformer := Transformer{
-		consumer:    &consumer,
+		consumer:    consumer,
 		transformer: &transformer,
 		wg:          &sync.WaitGroup{},
 	}
@@ -91,7 +113,7 @@ func NewKafkaTransformer(config Config) (Transformer, error) {
 	var projector pkg.Projector
 
 	if config.ProducerConfig != nil {
-		producer, err := kafka.NewProducer(l, config.ProducerConfig, collector)
+		producer, err := kafka.NewProducer(l, config.ProducerConfig, collector, options...)
 		if err != nil {
 			return Transformer{}, fmt.Errorf("producer creation failed: %w", err)
 		}

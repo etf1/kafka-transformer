@@ -5,16 +5,24 @@ import (
 	"sync"
 	"time"
 
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/eko/confluent-kafka-go/instrumentation/otel"
 	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
 	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/logger"
 )
 
+type KafkaConsumer interface {
+	Close() error
+	Poll(timeoutMs int) (event kafka.Event)
+	SubscribeTopics(topics []string, rebalanceCb kafka.RebalanceCb) (err error)
+}
+
 // Consumer represents the kafka consumer which will consume messages from a topic
 type Consumer struct {
 	topic      string
-	consumer   *confluent.Consumer
+	consumer   KafkaConsumer
 	stopChan   chan bool
 	bufferSize int
 	log        logger.Log
@@ -22,25 +30,37 @@ type Consumer struct {
 }
 
 // NewConsumer constructor for Consumer
-func NewConsumer(log logger.Log, topic string, config *confluent.ConfigMap, collector instrument.Collector, bufferSize int) (Consumer, error) {
+func NewConsumer(log logger.Log, topic string, config *confluent.ConfigMap, collector instrument.Collector, bufferSize int, options ...Option) (*Consumer, error) {
 	c, err := confluent.NewConsumer(config)
 
 	if err != nil {
-		return Consumer{}, err
+		return nil, err
 	}
 
-	return Consumer{
+	consumer := &Consumer{
 		topic:      topic,
 		consumer:   c,
 		stopChan:   make(chan bool, 1),
 		bufferSize: bufferSize,
 		log:        log,
 		collector:  collector,
-	}, nil
+	}
+
+	cfg := &optionsConfig{}
+	for _, option := range options {
+		option(cfg)
+	}
+
+	if cfg.tracerProvider != nil {
+		// In case OpenTelemetry tracing is enabled, wrap the original Kafka consumer.
+		consumer.consumer = otel.NewConsumerWithTracing(c, otel.WithTracerProvider(cfg.tracerProvider))
+	}
+
+	return consumer, nil
 }
 
 // Stop stops the consumer by sending a signal
-func (c Consumer) Stop() {
+func (c *Consumer) Stop() {
 	c.stopChan <- true
 }
 

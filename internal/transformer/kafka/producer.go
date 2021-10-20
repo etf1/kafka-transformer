@@ -4,22 +4,31 @@ import (
 	"log"
 	"time"
 
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/eko/confluent-kafka-go/instrumentation/otel"
 	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
 	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/logger"
 )
 
+type KafkaProducer interface {
+	Close()
+	Events() chan kafka.Event
+	Flush(timeoutMs int) int
+	ProduceChannel() chan *kafka.Message
+}
+
 // Producer represents the kafka producer which will produce
 // the transformed message to a topic defined in the Message
 type Producer struct {
-	producer  *confluent.Producer
+	producer  KafkaProducer
 	log       logger.Log
 	collector instrument.Collector
 }
 
 // NewProducer constructor for Producer
-func NewProducer(l logger.Log, config *confluent.ConfigMap, collector instrument.Collector) (Producer, error) {
+func NewProducer(l logger.Log, config *confluent.ConfigMap, collector instrument.Collector, options ...Option) (Producer, error) {
 	kafkaProducer, err := confluent.NewProducer(config)
 
 	if err != nil {
@@ -30,6 +39,16 @@ func NewProducer(l logger.Log, config *confluent.ConfigMap, collector instrument
 		producer:  kafkaProducer,
 		log:       l,
 		collector: collector,
+	}
+
+	cfg := &optionsConfig{}
+	for _, option := range options {
+		option(cfg)
+	}
+
+	if cfg.tracerProvider != nil {
+		// In case OpenTelemetry tracing is enabled, wrap the original Kafka producer.
+		p.producer = otel.NewProducerWithTracing(kafkaProducer, otel.WithTracerProvider(cfg.tracerProvider))
 	}
 
 	go func() {
