@@ -86,7 +86,7 @@ loop:
 				defer wg.Done()
 				defer func() {
 					if r := recover(); r != nil {
-						w.collectAfterOne(msg, toErr(r), start, th)
+						w.collectAfter(msg, toErr(r), start, th)
 						w.log.Errorf("worker: recovered from panic: %v", string(debug.Stack()))
 						chunk[index] = nil
 					}
@@ -98,7 +98,7 @@ loop:
 				w.log.Debugf("worker: #%v, message received %v, working...", index, msg)
 
 				chunk[index] = w.transformer.Transform(msg)
-				w.collectAfter(chunk[index], nil, start, th)
+				w.collectAfter(msg, nil, start, th)
 
 				w.log.Debugf("worker: #%v, work done %v", index, msg)
 			}(counter, msg)
@@ -139,13 +139,14 @@ func (w Workers) collectBefore(msg *confluent.Message, start time.Time) (th _ins
 	return
 }
 
+/*
 func (w Workers) collectAfter(msgs []*confluent.Message, err error, start time.Time, th _instrument.TimeHolder) {
 	for _, msg := range msgs {
 		w.collectAfterOne(msg, err, start, th)
 	}
 }
-
-func (w Workers) collectAfterOne(msg *confluent.Message, err error, start time.Time, th _instrument.TimeHolder) {
+*/
+func (w Workers) collectAfter(msg *confluent.Message, err error, start time.Time, th _instrument.TimeHolder) {
 	th.Opaque = msg.Opaque
 	msg.Opaque = th
 	w.collector.After(msg, instrument.TransformerTransform, err, start)
