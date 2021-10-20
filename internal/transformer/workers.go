@@ -98,6 +98,7 @@ loop:
 				w.log.Debugf("worker: #%v, message received %v, working...", index, msg)
 
 				chunk[index] = w.transformer.Transform(msg)
+				w.injectTimeHolder(chunk[index], th)
 				w.collectAfter(msg, nil, start, th)
 
 				w.log.Debugf("worker: #%v, work done %v", index, msg)
@@ -134,21 +135,23 @@ loop:
 func (w Workers) collectBefore(msg *confluent.Message, start time.Time) (th _instrument.TimeHolder) {
 	th = msg.Opaque.(_instrument.TimeHolder)
 	msg.Opaque = nil
+
 	w.collector.Before(msg, instrument.TransformerTransform, start)
 
 	return
 }
 
-/*
-func (w Workers) collectAfter(msgs []*confluent.Message, err error, start time.Time, th _instrument.TimeHolder) {
+func (w Workers) injectTimeHolder(msgs []*confluent.Message, th _instrument.TimeHolder) {
 	for _, msg := range msgs {
-		w.collectAfterOne(msg, err, start, th)
+		th.Opaque = msg.Opaque
+		msg.Opaque = th
 	}
 }
-*/
+
 func (w Workers) collectAfter(msg *confluent.Message, err error, start time.Time, th _instrument.TimeHolder) {
 	th.Opaque = msg.Opaque
 	msg.Opaque = th
+
 	w.collector.After(msg, instrument.TransformerTransform, err, start)
 	if err != nil {
 		// if transformation fails, the message will not be projected so we need to set the overall event here.

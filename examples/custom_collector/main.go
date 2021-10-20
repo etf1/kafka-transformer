@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -30,7 +31,10 @@ func main() {
 		ProducerConfig: &confluent.ConfigMap{
 			"bootstrap.servers": broker,
 		},
-		Collector: NewCollector("custom_collector"),
+		Collector: instrument.NewMultiCollector(
+			NewCollector("custom_collector"),
+			// Add your other collectors here if you have multiple ones...
+		),
 	}
 
 	transformer, err := kafka.NewKafkaTransformer(config)
