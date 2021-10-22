@@ -198,3 +198,12 @@ for development:
 * to run tests `make tests`
 * to stop local environment, run `make dev.down`
 
+# OpenTelemetry support
+
+An [OpenTelemetry](https://opentelemetry.io/) instrumentation is available under `instrumentation/otel/` directory.
+
+It is a separated Go module you can import in your project:
+
+```bash
+$ go get github.com/etf1/kafka-transformer/instrumentation/otel
+```

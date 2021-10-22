@@ -114,6 +114,7 @@ func (c *Consumer) collectBefore(msg *confluent.Message, start time.Time) {
 		}
 		msg.Opaque = th
 	}
+
 	c.collector.Before(msg, instrument.OverallTime, start)
 	c.collector.Before(msg, instrument.KafkaConsumerConsume, start)
 }

@@ -65,17 +65,22 @@ func (p *Projector) Run(wg *sync.WaitGroup, inChan chan *confluent.Message) {
 }
 
 func (p Projector) collectBefore(msg *confluent.Message, start time.Time) (th _instrument.TimeHolder) {
-	if p.collector != nil {
-		th = msg.Opaque.(_instrument.TimeHolder)
-		msg.Opaque = th.Opaque
-		p.collector.Before(msg, instrument.ProjectorProject, start)
+	if p.collector == nil {
+		return
 	}
+
+	th = msg.Opaque.(_instrument.TimeHolder)
+	msg.Opaque = th.Opaque
+
+	p.collector.Before(msg, instrument.ProjectorProject, start)
 	return
 }
 
 func (p Projector) collectAfter(msg *confluent.Message, err error, start time.Time, th _instrument.TimeHolder) {
-	if p.collector != nil {
-		p.collector.After(msg, instrument.ProjectorProject, err, start)
-		p.collector.After(msg, instrument.OverallTime, err, th.ConsumeStart)
+	if p.collector == nil {
+		return
 	}
+
+	p.collector.After(msg, instrument.ProjectorProject, err, start)
+	p.collector.After(msg, instrument.OverallTime, err, th.ConsumeStart)
 }
