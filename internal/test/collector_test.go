@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package test
@@ -6,6 +7,7 @@ import (
 	"testing"
 
 	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
 )
 
