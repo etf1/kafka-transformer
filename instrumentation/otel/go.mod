@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/confluentinc/confluent-kafka-go v1.9.2
-	github.com/etf1/kafka-transformer v0.0.5
+	github.com/etf1/kafka-transformer v0.0.2-0.20221208140254-a1ff542f7eab
 	github.com/stretchr/testify v1.7.1
 	go.opentelemetry.io/contrib v1.0.0
 	go.opentelemetry.io/otel v1.0.1
