@@ -9,7 +9,8 @@ function wait_for_kafka(){
     do
         echo "Waiting for kafka cluster $1 to be ready ..."
         # kafkacat has 5s timeout
-        kafkacat -b "${server}" -L > /dev/null 2>&1 && break
+        # kafkacat -b "${server}" -L > /dev/null 2>&1 && break
+        kafkacat -b "${server}" -L && break
     done
 }
 
