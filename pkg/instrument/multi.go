@@ -4,7 +4,7 @@ package instrument
 import (
 	"time"
 
-	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
+	confluent "github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
 // MultiCollector allows you to compose a list of collector

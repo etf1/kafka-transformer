@@ -3,7 +3,7 @@ package instrument
 import (
 	"time"
 
-	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
+	confluent "github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
 // Collector allows to specify a collector for all the main actions of the kafka transformer.

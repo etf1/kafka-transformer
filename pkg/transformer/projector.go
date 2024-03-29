@@ -1,7 +1,7 @@
 package transformer
 
 import (
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
 // Projector is an interface which is used by Kafka.Transformer

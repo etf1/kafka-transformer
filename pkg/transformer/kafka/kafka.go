@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
+	confluent "github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
 	_logger "github.com/etf1/kafka-transformer/internal/logger"
 	internal "github.com/etf1/kafka-transformer/internal/transformer"

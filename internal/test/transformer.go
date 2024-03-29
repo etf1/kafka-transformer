@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/etf1/kafka-transformer/pkg/transformer"
 )
 

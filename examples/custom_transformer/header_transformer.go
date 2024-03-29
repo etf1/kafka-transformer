@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	kafka "github.com/confluentinc/confluent-kafka-go/kafka"
+	kafka "github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/etf1/kafka-transformer/pkg/logger"
 )
 
