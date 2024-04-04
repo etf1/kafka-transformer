@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	kafka "github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -12,7 +13,7 @@ type headerTransformer struct {
 }
 
 // Add a custom header x-app-id to the message
-func (ht headerTransformer) Transform(src *kafka.Message) []*kafka.Message {
+func (ht headerTransformer) Transform(ctx context.Context, src *kafka.Message) []*kafka.Message {
 	topic := "custom-transformer"
 	msg := &kafka.Message{
 		TopicPartition: kafka.TopicPartition{

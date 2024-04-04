@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
@@ -35,7 +36,6 @@ type Transformer struct {
 	producer    *kafka.Producer
 	transformer *internal.Transformer
 	projector   *internal.Projector
-	config      Config
 	wg          *sync.WaitGroup
 }
 
@@ -124,7 +124,7 @@ func (k Transformer) Stop() {
 }
 
 // Run will start the Transformer with all the components (consumer, transformer, producer)
-func (k Transformer) Run() error {
+func (k Transformer) Run(ctx context.Context) error {
 	log.Println("starting kafka transformer ...")
 
 	k.wg.Add(3)
@@ -138,11 +138,11 @@ func (k Transformer) Run() error {
 
 	// Then transformer
 	log.Println("starting transformer ...")
-	transformerChan := k.transformer.Run(k.wg, consumerChan)
+	transformerChan := k.transformer.Run(ctx, k.wg, consumerChan)
 
 	// Finally, producer
 	log.Println("starting projector ...")
-	k.projector.Run(k.wg, transformerChan)
+	k.projector.Run(ctx, k.wg, transformerChan)
 
 	k.wg.Wait()
 

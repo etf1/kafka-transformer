@@ -1,6 +1,7 @@
 package transformer
 
 import (
+	"context"
 	"log"
 	"runtime/debug"
 	"sync"
@@ -63,7 +64,7 @@ func flushChunk(resultChan chan *confluent.Message, c chunk, size int) {
 }
 
 // Run starts parallel processing of messages
-func (w Workers) Run(resultChan chan *confluent.Message) {
+func (w Workers) Run(ctx context.Context, resultChan chan *confluent.Message) {
 	log.Println("starting transformer workers")
 
 	wg := sync.WaitGroup{}
@@ -97,7 +98,7 @@ loop:
 
 				w.log.Debugf("worker: #%v, message received %v, working...", index, msg)
 
-				chunk[index] = w.transformer.Transform(msg)
+				chunk[index] = w.transformer.Transform(ctx, msg)
 				w.injectTimeHolder(chunk[index], th)
 				w.collectAfter(msg, nil, start, th)
 

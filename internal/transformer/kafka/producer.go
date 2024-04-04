@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -59,7 +60,7 @@ func NewProducer(l logger.Log, config *confluent.ConfigMap, collector instrument
 }
 
 // Project implements the Projector interface
-func (p Producer) Project(msg *confluent.Message) {
+func (p Producer) Project(ctx context.Context, msg *confluent.Message) {
 	p.collectBefore(msg)
 	p.producer.ProduceChannel() <- msg
 }

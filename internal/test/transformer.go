@@ -1,6 +1,8 @@
 package test
 
 import (
+	"context"
+
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/etf1/kafka-transformer/pkg/transformer"
 )
@@ -16,12 +18,12 @@ func NewUnstableTransformer() transformer.Transformer {
 	}
 }
 
-func (ut unstableTransformer) Transform(msg *kafka.Message) []*kafka.Message {
+func (ut unstableTransformer) Transform(ctx context.Context, msg *kafka.Message) []*kafka.Message {
 	if string(msg.Value) == "panic" {
 		panic("panic from transformer")
 	}
 
-	return ut.passthrough.Transform(msg)
+	return ut.passthrough.Transform(ctx, msg)
 }
 
 type duplicatorTransformer struct {
@@ -35,8 +37,8 @@ func NewDuplicatorTransformer() transformer.Transformer {
 	}
 }
 
-func (dt duplicatorTransformer) Transform(msg *kafka.Message) []*kafka.Message {
-	result := dt.passthrough.Transform(msg)
+func (dt duplicatorTransformer) Transform(ctx context.Context, msg *kafka.Message) []*kafka.Message {
+	result := dt.passthrough.Transform(ctx, msg)
 	// return 2 times the same message, for testing duplication
 	return append(result, result[0])
 }
@@ -52,8 +54,8 @@ func NewOpaqueTransformer() transformer.Transformer {
 	}
 }
 
-func (ot opaqueTransformer) Transform(msg *kafka.Message) []*kafka.Message {
-	result := ot.passthrough.Transform(msg)
+func (ot opaqueTransformer) Transform(ctx context.Context, msg *kafka.Message) []*kafka.Message {
+	result := ot.passthrough.Transform(ctx, msg)
 	result[0].Opaque = "opaque"
 	return append(result, result[0])
 }

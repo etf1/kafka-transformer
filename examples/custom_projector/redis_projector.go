@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"strconv"
 	"time"
@@ -47,7 +48,7 @@ func (r RedisProjector) Close() error {
 }
 
 // Project implements transformer.Projector interface
-func (r RedisProjector) Project(msg *kafka.Message) {
+func (r RedisProjector) Project(ctx context.Context, msg *kafka.Message) {
 
 	if len(msg.Value) == 0 {
 		return

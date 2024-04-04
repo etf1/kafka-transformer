@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -52,7 +53,8 @@ func main() {
 	exitchan := make(chan bool, 1)
 
 	go func() {
-		if err := transformer.Run(); err != nil {
+		ctx := context.Background()
+		if err := transformer.Run(ctx); err != nil {
 			log.Printf("failed to start transformer: %v", err)
 		}
 		exitchan <- true
