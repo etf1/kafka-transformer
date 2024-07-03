@@ -1,12 +1,13 @@
 package transformer
 
 import (
+	"context"
 	"log"
 	"runtime/debug"
 	"sync"
 	"time"
 
-	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
+	confluent "github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
 	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/logger"
@@ -30,7 +31,7 @@ func NewProjector(log logger.Log, projector pkg.Projector, collector instrument.
 }
 
 // Run starts the projector goroutine
-func (p *Projector) Run(wg *sync.WaitGroup, inChan chan *confluent.Message) {
+func (p *Projector) Run(ctx context.Context, wg *sync.WaitGroup, inChan chan *confluent.Message) {
 	go func() {
 		defer log.Println("projector stopped")
 		defer wg.Done()
@@ -53,7 +54,7 @@ func (p *Projector) Run(wg *sync.WaitGroup, inChan chan *confluent.Message) {
 				start = time.Now()
 				th = p.collectBefore(msg, start)
 
-				p.projector.Project(msg)
+				p.projector.Project(ctx, msg)
 
 				p.collectAfter(msg, nil, start, th)
 

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel"

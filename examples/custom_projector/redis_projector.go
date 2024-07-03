@@ -1,11 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"strconv"
 	"time"
 
-	kafka "github.com/confluentinc/confluent-kafka-go/kafka"
+	kafka "github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/go-redis/redis/v7"
 )
 
@@ -47,7 +48,7 @@ func (r RedisProjector) Close() error {
 }
 
 // Project implements transformer.Projector interface
-func (r RedisProjector) Project(msg *kafka.Message) {
+func (r RedisProjector) Project(ctx context.Context, msg *kafka.Message) {
 
 	if len(msg.Value) == 0 {
 		return

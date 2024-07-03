@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
+	confluent "github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/etf1/kafka-transformer/pkg/transformer/kafka"
 	"github.com/sirupsen/logrus"
 )
@@ -46,7 +47,8 @@ func main() {
 	exitchan := make(chan bool, 1)
 
 	go func() {
-		if err = transformer.Run(); err != nil {
+		ctx := context.Background()
+		if err = transformer.Run(ctx); err != nil {
 			log.Printf("failed to start transformer: %v", err)
 		}
 		exitchan <- true
