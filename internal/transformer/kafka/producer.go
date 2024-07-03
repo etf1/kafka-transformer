@@ -1,10 +1,11 @@
 package kafka
 
 import (
+	"context"
 	"log"
 	"time"
 
-	confluent "github.com/confluentinc/confluent-kafka-go/kafka"
+	confluent "github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	_instrument "github.com/etf1/kafka-transformer/internal/instrument"
 	"github.com/etf1/kafka-transformer/pkg/instrument"
 	"github.com/etf1/kafka-transformer/pkg/logger"
@@ -59,7 +60,7 @@ func NewProducer(l logger.Log, config *confluent.ConfigMap, collector instrument
 }
 
 // Project implements the Projector interface
-func (p Producer) Project(msg *confluent.Message) {
+func (p Producer) Project(ctx context.Context, msg *confluent.Message) {
 	p.collectBefore(msg)
 	p.producer.ProduceChannel() <- msg
 }

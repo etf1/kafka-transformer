@@ -1,4 +1,4 @@
-GOLANG_VERSION?=1.17
+GOLANG_VERSION?=1.22
 
 .PHONY: dev.up
 dev.up:

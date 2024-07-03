@@ -1,13 +1,15 @@
 package transformer
 
 import (
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"context"
+
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
 type passThrough struct{}
 
 // Transform a kafka Message
-func (p passThrough) Transform(src *kafka.Message) []*kafka.Message {
+func (p passThrough) Transform(ctx context.Context, src *kafka.Message) []*kafka.Message {
 	topic := *src.TopicPartition.Topic + "-passthrough"
 
 	msg := &kafka.Message{
